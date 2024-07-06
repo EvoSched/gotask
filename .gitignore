@@ -7,6 +7,8 @@
 *.dll
 *.so
 *.dylib
+task
+tui
 
 # Test binary, built with `go test -c`
 *.test
@@ -33,10 +35,7 @@ go.work.sum
 # IntelliJ IDEA project files
 *.iml
 *.iws
-.idea/modules.xml
-.idea/workspace.xml
-.idea/vcs.xml
-.idea/**/dataSources/
-.idea/**/dataSources.local.xml
-.idea/**/shelf/
-.idea/**/httpRequests/
+.idea/
+
+# Environment files
+.env

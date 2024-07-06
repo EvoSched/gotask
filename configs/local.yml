@@ -1,0 +1,2 @@
+server:
+  readTimeout: 5
