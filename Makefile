@@ -3,10 +3,10 @@ include .env
 .SILENT:
 
 build-cli:
-	go build -o ./.bin/cli ./cmd/cli/main.go
+	go build -o task ./cmd/cli/main.go
 
 build-tui:
-	go build -o ./.bin/tui ./cmd/tui/main.go
+	go build -o tui ./cmd/tui/main.go
 
 build : build-cli build-tui
 
