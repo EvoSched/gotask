@@ -1,0 +1,4 @@
+server:
+  readTimeout: 10
+  writeTimeout: 10
+  maxHeaderMB: 1
