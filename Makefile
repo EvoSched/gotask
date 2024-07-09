@@ -12,3 +12,12 @@ build : build-cli build-tui
 
 tui: build-tui
 	./.bin/tui
+
+docker-build:
+	@docker-compose -f deployments/docker-compose.yml -p gotask --env-file .env up --build
+
+docker-up:
+	@docker-compose -f deployments/docker-compose.yml -p gotask --env-file .env up -d
+
+docker-down:
+	@docker-compose -f deployments/docker-compose.yml -p gotask --env-file .env down
