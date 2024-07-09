@@ -39,3 +39,6 @@ go.work.sum
 
 # Environment files
 .env
+
+# Temporary files
+tmp/

@@ -1,0 +1,13 @@
+# Config file for Air
+
+[build]
+cmd = "go build -o ./tmp/cli ./cmd/cli" # Command to build your CLI application
+bin = "./tmp/cli"                       # Binary output for CLI
+full_bin = "APP_ENV=local ./tmp/cli"     # Full command to run the CLI binary
+exclude_dir = ["tmp", "vendor", "scripts", "frontend", "docs", ".git"] # Excluded directories
+exclude_file = ["*.md"]                # Excluded files
+include_ext = ["go", "yml"]            # Included file extensions
+delay = 1000                           # Delay in milliseconds
+
+[log]
+time = true
