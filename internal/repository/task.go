@@ -2,14 +2,17 @@ package repository
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/EvoSched/gotask/internal/models"
 )
 
+var due time.Time = time.Now()
+
 var tasks = []*models.Task{
-	models.NewTask(1, "title1", "description1"),
-	models.NewTask(2, "title2", "description2"),
-	models.NewTask(3, "title3", "description3"),
+	models.NewTask(1, "title1", "description1", &due, []string{"MA"}),
+	models.NewTask(2, "title2", "description2", nil, []string{"CS"}),
+	models.NewTask(3, "title3", "description3", &due, []string{"MA"}),
 }
 
 type TaskRepository struct {

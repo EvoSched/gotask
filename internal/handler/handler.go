@@ -19,7 +19,7 @@ func NewHandler(service *service.Service) *Handler {
 func (h *Handler) Execute() {
 	rootCmd := h.RootCmd()
 
-	rootCmd.AddCommand(h.AddCmd(), h.GetCmd(), h.ListCmd())
+	rootCmd.AddCommand(h.AddCmd(), h.GetCmd(), h.ModCmd(), h.ComCmd(), h.ListCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
