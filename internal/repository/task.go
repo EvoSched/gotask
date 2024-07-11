@@ -7,12 +7,15 @@ import (
 	"github.com/EvoSched/gotask/internal/models"
 )
 
-var due time.Time = time.Now()
+var due = time.Now()
+var due1 = time.Now().AddDate(0, 0, 2)
+var due2 = time.Now().AddDate(0, 0, 4)
 
+// sample data to test command functions
 var tasks = []*models.Task{
-	models.NewTask(1, "title1", "description1", &due, []string{"MA"}),
-	models.NewTask(2, "title2", "description2", nil, []string{"CS"}),
-	models.NewTask(3, "title3", "description3", &due, []string{"MA"}),
+	models.NewTask(1, "description1", &due, []string{"MA"}),
+	models.NewTask(2, "description2", &due1, []string{"CS"}),
+	models.NewTask(3, "description3", &due2, []string{"MA"}),
 }
 
 type TaskRepository struct {

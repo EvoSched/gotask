@@ -130,7 +130,7 @@ func (h *Handler) ListCmd() *cobra.Command {
 				if task.Date != nil {
 					str = task.Date.Format(dateFormats[0])
 				}
-				fmt.Printf("%d. %s %s %s %s\n", i+1, task.Title, task.Description, str, task.Tags[0])
+				fmt.Printf("%d. %s %s %s\n", i+1, task.Description, str, task.Tags[0])
 			}
 		},
 	}
@@ -141,41 +141,43 @@ func (h *Handler) ListCmd() *cobra.Command {
 /*
 grammar:
 
-gt add <title> <description> <day> at <time-time> <tag>
+todo gt add <description> <day> at <time-time> <tag>
 
-gt add <title> <description> <date> <time-time> <tag>
+todo gt add <description> <date> <time-time> <tag>
 
-vs
-
-gt add <title> <description> <due> <tag> <-- this is what we just finished
+gt add <description> <due> <tag> <-- this is what we just finished
 */
 func parseAdd(args []string) (*models.Task, error) {
 	var description string
 	var date time.Time
 	var tags []string
 	// we could in theory briefly check os.Args to see whether the first two arguments contain strings (for now, assume it does)
-	title := args[0]
-	if len(args) > 1 {
-		description = args[1]
+	if len(args) > 0 {
+		description = args[0]
+	} else {
+		return nil, errors.New("task name is required")
 	}
-	flg := false
-	for _, arg := range args[2:] {
-		if arg[0] == '+' {
-			tags = append(tags, arg[1:])
-		} else {
-			if flg {
-				return nil, fmt.Errorf("invalid command: contains repeat of time argument")
+
+	if len(args) > 1 {
+		flg := false
+		for _, arg := range args[1:] {
+			if arg[0] == '+' {
+				tags = append(tags, arg[1:])
+			} else {
+				if flg {
+					return nil, errors.New("invalid command: contains repeat of time argument")
+				}
+				flg = true
+				d, err := parseDate(arg)
+				if err != nil {
+					return nil, err
+				}
+				date = d
 			}
-			flg = true
-			d, err := parseDate(arg)
-			if err != nil {
-				return nil, err
-			}
-			date = d
 		}
 	}
 
-	return models.NewTask(0, title, description, &date, tags), nil
+	return models.NewTask(0, description, &date, tags), nil
 }
 
 func parseDate(arg string) (time.Time, error) {
