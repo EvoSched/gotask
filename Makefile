@@ -1,6 +1,6 @@
-include .env
-.PHONY:
-.SILENT:
+include .env 	# Include environment variables
+.PHONY: 		# List of targets not related to files
+.SILENT: 		# Don't show the command executed
 
 build-cli:
 	go build -o task ./cmd/cli/main.go
@@ -11,7 +11,10 @@ build-tui:
 build : build-cli build-tui
 
 tui: build-tui
-	./.bin/tui
+	./tui
+
+cli: build-cli
+	./task
 
 docker-build:
 	@docker-compose -f deployments/docker-compose.yml -p gotask --env-file .env up --build

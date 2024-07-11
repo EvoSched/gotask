@@ -1,55 +1,67 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
 )
 
+const (
+	EnvLocal = "local"
+	EnvProd  = "prod"
+)
+
 type SQLite struct {
-	Database string
+	Database string `mapstructure:"SQLITE_DB"`
 }
 
 type Config struct {
-	Env    string
+	Env    string `mapstructure:"APP_ENV"`
 	SQLite SQLite
 }
 
-func NewConfig(folder, filename string) (*Config, error) {
+func NewConfig(folder string) (*Config, error) {
 	cfg := new(Config)
 
-	//set default app environment
-	viper.SetDefault("env", "local")
+	viper.SetDefault("APP_ENV", EnvLocal)
+	viper.SetDefault("SQLITE_DB", "sqllite.db")
 
-	//load from directory
-	viper.SetConfigName(filename)
-	viper.AddConfigPath(folder)
+	viper.SetConfigFile(".env")
+	viper.AutomaticEnv() // Automatically override with environment variables
 
-	//load env
-	viper.AutomaticEnv()
-
-	//read
 	if err := viper.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
-			return nil, fmt.Errorf("config file not found")
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 
-	//get config of app environment
-	env := viper.Get("env")
-	viper.SetConfigName(env.(string))
+	env := viper.GetString("APP_ENV")
 
-	//merge with default config
+	if env == "" {
+		return nil, fmt.Errorf("environment not set")
+	}
+
+	// if env is not local or prod, return error
+	if env != EnvLocal && env != EnvProd {
+		return nil, fmt.Errorf("invalid environment: %s", env)
+	}
+
+	viper.SetConfigName(env)
+	viper.AddConfigPath(folder)
+	viper.SetConfigType("yml") // Look for specific type
+	//viper.MergeInConfig()
 	if err := viper.MergeInConfig(); err != nil {
-		fmt.Printf("Error reading config file, %s", err)
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			return nil, fmt.Errorf("config file not found")
+		}
+		return nil, err
 	}
 
-	//unmarshal
+	// Unmarshal the configuration into the Config struct
 	if err := viper.Unmarshal(cfg); err != nil {
+		return nil, err
+	}
+
+	// Unmarshal the configuration into the SQLite struct
+	if err := viper.Unmarshal(&cfg.SQLite); err != nil {
 		return nil, err
 	}
 

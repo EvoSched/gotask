@@ -7,25 +7,17 @@ import (
 	"github.com/EvoSched/gotask/internal/handler"
 	"github.com/EvoSched/gotask/internal/repository"
 	"github.com/EvoSched/gotask/internal/service"
-
-	"github.com/joho/godotenv"
 )
 
 const (
-	ConfigDir  = "configs"
-	ConfigFile = "main"
+	ConfigDir = "configs"
 )
 
 func Run() {
 	//repository<-service<-handler<-cli
 
-	//load env
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
-	}
-
 	//init config
-	cfg, err := config.NewConfig(ConfigDir, ConfigFile)
+	cfg, err := config.NewConfig(ConfigDir)
 	if err != nil {
 		log.Fatal("Error loading config: ", err)
 	}
