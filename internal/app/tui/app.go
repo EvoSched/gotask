@@ -8,14 +8,11 @@ import (
 	"github.com/EvoSched/gotask/internal/config"
 	"github.com/EvoSched/gotask/internal/repository"
 	"github.com/EvoSched/gotask/internal/service"
-	"github.com/joho/godotenv"
-
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 const (
-	ConfigDir  = "configs"
-	ConfigFile = "main"
+	ConfigDir = "configs"
 )
 
 type model struct {
@@ -25,13 +22,8 @@ type model struct {
 func Run() {
 	//repository<-service<-handler<-tui
 
-	//load env
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
-	}
-
 	//init config
-	cfg, err := config.NewConfig(ConfigDir, ConfigFile)
+	cfg, err := config.NewConfig(ConfigDir)
 	if err != nil {
 		log.Fatal("Error loading config: ", err)
 	}
