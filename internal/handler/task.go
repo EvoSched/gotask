@@ -149,7 +149,7 @@ gt add <description> <due> <tag> <-- this is what we just finished
 */
 func parseAdd(args []string) (*models.Task, error) {
 	var description string
-	var date time.Time
+	var date *time.Time
 	var tags []string
 	// we could in theory briefly check os.Args to see whether the first two arguments contain strings (for now, assume it does)
 	if len(args) > 0 {
@@ -177,35 +177,42 @@ func parseAdd(args []string) (*models.Task, error) {
 		}
 	}
 
-	return models.NewTask(0, description, &date, tags), nil
+	return models.NewTask(0, description, date, tags), nil
 }
 
-func parseDate(arg string) (time.Time, error) {
+func parseDate(arg string) (*time.Time, error) {
 	today := time.Now()
 	switch arg {
 	case "eod":
-		return today, nil
+		return &today, nil
 	case "eow", "sat":
-		return today.AddDate(0, 0, int(time.Saturday-today.Weekday()+7)%7), nil
+		d := today.AddDate(0, 0, int(time.Saturday-today.Weekday()+7)%7)
+		return &d, nil
 	case "sun":
-		return today.AddDate(0, 0, int(time.Sunday-today.Weekday()+7)%7), nil
+		d := today.AddDate(0, 0, int(time.Sunday-today.Weekday()+7)%7)
+		return &d, nil
 	case "mon":
-		return today.AddDate(0, 0, int(time.Monday-today.Weekday()+7)%7), nil
+		d := today.AddDate(0, 0, int(time.Monday-today.Weekday()+7)%7)
+		return &d, nil
 	case "tue":
-		return today.AddDate(0, 0, int(time.Tuesday-today.Weekday()+7)%7), nil
+		d := today.AddDate(0, 0, int(time.Tuesday-today.Weekday()+7)%7)
+		return &d, nil
 	case "wed":
-		return today.AddDate(0, 0, int(time.Wednesday-today.Weekday()+7)%7), nil
+		d := today.AddDate(0, 0, int(time.Wednesday-today.Weekday()+7)%7)
+		return &d, nil
 	case "thu":
-		return today.AddDate(0, 0, int(time.Thursday-today.Weekday()+7)%7), nil
+		d := today.AddDate(0, 0, int(time.Thursday-today.Weekday()+7)%7)
+		return &d, nil
 	case "fri":
-		return today.AddDate(0, 0, int(time.Friday-today.Weekday()+7)%7), nil
+		d := today.AddDate(0, 0, int(time.Friday-today.Weekday()+7)%7)
+		return &d, nil
 	default:
 		for _, v := range dateFormats {
 			t, err := time.Parse(v, arg)
 			if err == nil {
-				return t, nil
+				return &t, nil
 			}
 		}
-		return time.Time{}, fmt.Errorf("invalid date format: %s", arg)
+		return nil, fmt.Errorf("invalid date format: %s", arg)
 	}
 }
