@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
@@ -95,4 +96,18 @@ func (h *Handler) ListCmd() *cobra.Command {
 	}
 
 	return listCmd
+}
+
+func parseTimeStamp(arg string) (*time.Time, *time.Time, error) {
+	lexer := NewLexer(arg)
+	tokens := lexer.Scan()
+
+	parser := NewParser(tokens)
+	start, end, err := parser.Parse()
+
+	if err != nil {
+		return start, end, err
+	}
+
+	return start, end, err
 }
