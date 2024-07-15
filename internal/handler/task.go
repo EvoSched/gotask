@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -215,4 +216,145 @@ func parseDate(arg string) (*time.Time, error) {
 		}
 		return nil, fmt.Errorf("invalid date format: %s", arg)
 	}
+}
+
+func parseTimeStamp(arg string) (*time.Time, *time.Time, error) {
+	hour, colon, minute, am, dash := false, false, false, false, false
+	startHour, endHour, startMinute, endMinute := 0, 0, 0, 0
+	startFormat, endFormat := "", ""
+
+	for index := 0; index < len(arg); {
+		currentChar := string(arg[index])
+
+		switch currentChar {
+		case ":":
+			if !hour || minute {
+				return &time.Time{}, &time.Time{}, errors.New("colon cannot occur before hour or after minute")
+			}
+
+			if colon {
+				return &time.Time{}, &time.Time{}, errors.New("colon cannot occur more than once in a given time")
+			}
+
+			colon = true
+
+			index++
+		case "-":
+			if !hour || dash {
+				return &time.Time{}, &time.Time{}, errors.New("dash cannot occur before hour or more than once in a given timestamp")
+			}
+
+			hour = false
+			colon = false
+			minute = false
+			am = false
+			dash = true
+
+			index++
+		default:
+			if val, err := strconv.Atoi(currentChar); err == nil {
+				if hour && !colon {
+					return &time.Time{}, &time.Time{}, errors.New("hour cannot be more than two digits")
+				}
+
+				if minute {
+					return &time.Time{}, &time.Time{}, errors.New("minute cannot be more than two digits")
+				}
+
+				if am {
+					return &time.Time{}, &time.Time{}, errors.New("digit cannot occur directly after time format")
+				}
+
+				if index+1 >= len(arg) {
+					return &time.Time{}, &time.Time{}, errors.New("invalid digit placement")
+				}
+
+				// If colon is true, then we're currently parsing a minute
+				// If not, we're currently parsing an hour
+				if colon {
+					val_, err := strconv.Atoi(string(arg[index+1]))
+
+					// If dash is true, we're parsing the ending half of the timestamp
+					// If not, we're parsing the starting half
+					if dash {
+						if err != nil {
+							return &time.Time{}, &time.Time{}, errors.New("minute must be more than two digits")
+						} else {
+							endMinute = (val * 10) + val_
+							minute = true
+							index += 2
+						}
+					} else {
+						if err != nil {
+							return &time.Time{}, &time.Time{}, errors.New("minute must be more than two digits")
+						} else {
+							startMinute = (val * 10) + val_
+							minute = true
+							index += 2
+						}
+					}
+				} else {
+					if dash {
+						endHour = (endHour * 10) + val
+						hour = true
+						index++
+					} else {
+						startHour = (startHour * 10) + val
+						hour = true
+						index++
+					}
+				}
+			} else {
+				if !hour {
+					return &time.Time{}, &time.Time{}, errors.New("letter cannot occur before a digit in timestamp")
+				}
+
+				// "AM" must directly follow a minute
+				if !minute {
+					return &time.Time{}, &time.Time{}, errors.New("invalid letter placement in timestamp")
+				}
+
+				if index+1 >= len(arg) {
+					return &time.Time{}, &time.Time{}, errors.New("invalid letter placement")
+				}
+
+				// If dash is true, we're parsing the ending half of the timestamp
+				// If not, we're parsing the starting half
+				if dash {
+					endFormat = string(arg[index : index+2])
+				} else {
+					startFormat = string(arg[index : index+2])
+				}
+
+				am = true
+				index += 2
+			}
+		}
+	}
+
+	// Convert from 12-hour to 24-hour clock format
+	if startFormat == "pm" {
+		startHour += 12
+	}
+	if endFormat == "pm" {
+		endHour += 12
+	}
+
+	if endHour < startHour {
+		return &time.Time{}, &time.Time{}, errors.New("ending hour must be greater than starting hour")
+	}
+
+	if startMinute < 0 || startMinute > 60 {
+		return &time.Time{}, &time.Time{}, errors.New("minute must be a value between 0 and 60")
+	}
+
+	if endMinute < 0 || endMinute > 60 {
+		return &time.Time{}, &time.Time{}, errors.New("minute must be a value between 0 and 60")
+	}
+
+	year, month, day := time.Now().Date()
+	startTime := time.Date(year, month, day, startHour, startMinute, 0, 0, time.UTC)
+	endTime := time.Date(year, month, day, endHour, endMinute, 0, 0, time.UTC)
+
+	return &startTime, &endTime, nil
 }
