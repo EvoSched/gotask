@@ -12,10 +12,9 @@ import (
 
 const (
 	DateFmtDMY = "02-01-2006"
-	DateFmtYMD = "2006-01-02"
 )
 
-var dateFormats = []string{DateFmtDMY, DateFmtYMD}
+var dateFormats = []string{DateFmtDMY, time.DateOnly}
 
 func (h *Handler) RootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
@@ -119,7 +118,7 @@ func (h *Handler) ListCmd() *cobra.Command {
 
 			fmt.Println("Tasks:")
 			for i, task := range tasks {
-				str := "nil"
+				str := "N/A"
 				if task.TS != nil {
 					str = task.TS.String()
 				}
