@@ -13,12 +13,13 @@ import (
 
 const (
 	DateFmtDMY = "02-01-2006"
+	// DateFmtYMD https://golang.org/pkg/time/#pkg-constants we should use the constants from the time package
 	DateFmtYMD = "2006-01-02"
 	// todo need to add more date formats
 	//		need to support hour, min, sec if the user desires
 )
 
-var dateFormats = []string{DateFmtDMY, DateFmtYMD}
+var dateFormats = []string{DateFmtDMY, time.DateOnly}
 
 func (h *Handler) RootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
@@ -34,7 +35,7 @@ func (h *Handler) AddCmd() *cobra.Command {
 		Use:   "add",
 		Short: "Add a new task",
 		Run: func(cmd *cobra.Command, args []string) {
-			//TODO: move validation or args to parseAdd function
+			//TODO: move validation of args to parseAdd function
 			if len(args) < 1 {
 				log.Fatal(errors.New("task name is required"))
 			}
