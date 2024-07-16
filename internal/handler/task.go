@@ -34,7 +34,7 @@ func (h *Handler) AddCmd() *cobra.Command {
 		Use:   "add",
 		Short: "Add a new task",
 		Run: func(cmd *cobra.Command, args []string) {
-			//TODO: create validation function validateAddArgs(args []string) error
+			//TODO: move validation or args to parseAdd function
 			if len(args) < 1 {
 				log.Fatal(errors.New("task name is required"))
 			}
@@ -54,7 +54,6 @@ func (h *Handler) GetCmd() *cobra.Command {
 		Use:   "get",
 		Short: "Get tasks by ID",
 		Run: func(cmd *cobra.Command, args []string) {
-			//TODO: create validation function validateGetArgs(args []string) error
 			if len(args) < 1 {
 				log.Fatal(errors.New("task id is required"))
 			}
@@ -97,7 +96,6 @@ func (h *Handler) ComCmd() *cobra.Command {
 		Use:   "com",
 		Short: "Comment a task by ID",
 		Run: func(cmd *cobra.Command, args []string) {
-			//TODO: create validation function validateCommentArgs(args []string) error
 			if len(args) != 2 {
 				log.Fatal(errors.New("argument mismatch for comment command"))
 			}
@@ -153,11 +151,12 @@ todo gt add <description> <date> <time-time> <tag>
 gt add <description> <due> <tag> <-- this is what we just finished
 */
 func parseAdd(args []string) (*models.Task, error) {
+	//TODO: we should validate args here and return an error if they are invalid
+
 	var description string
 	var date *time.Time
 	var tags []string
 	// we could in theory briefly check os.Args to see whether the first two arguments contain strings (for now, assume it does)
-	//TODO: if we have validation functions, we should not check args here, because it is already done in the validation function
 	if len(args) > 0 {
 		description = args[0]
 	} else {
