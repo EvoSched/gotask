@@ -1,6 +1,7 @@
 package handler
 
 import (
+	//TODO: sort imports
 	"errors"
 	"fmt"
 	"github.com/EvoSched/gotask/internal/models"
@@ -33,6 +34,7 @@ func (h *Handler) AddCmd() *cobra.Command {
 		Use:   "add",
 		Short: "Add a new task",
 		Run: func(cmd *cobra.Command, args []string) {
+			//TODO: create validation function validateAddArgs(args []string) error
 			if len(args) < 1 {
 				log.Fatal(errors.New("task name is required"))
 			}
@@ -52,6 +54,7 @@ func (h *Handler) GetCmd() *cobra.Command {
 		Use:   "get",
 		Short: "Get tasks by ID",
 		Run: func(cmd *cobra.Command, args []string) {
+			//TODO: create validation function validateGetArgs(args []string) error
 			if len(args) < 1 {
 				log.Fatal(errors.New("task id is required"))
 			}
@@ -94,6 +97,7 @@ func (h *Handler) ComCmd() *cobra.Command {
 		Use:   "com",
 		Short: "Comment a task by ID",
 		Run: func(cmd *cobra.Command, args []string) {
+			//TODO: create validation function validateCommentArgs(args []string) error
 			if len(args) != 2 {
 				log.Fatal(errors.New("argument mismatch for comment command"))
 			}
@@ -126,6 +130,7 @@ func (h *Handler) ListCmd() *cobra.Command {
 
 			fmt.Println("Tasks:")
 			for i, task := range tasks {
+				//TODO: i don't think we should display "nil" here. We should display an empty string, or "N/A" or something
 				str := "nil"
 				if task.Date != nil {
 					str = task.Date.Format(dateFormats[0])
@@ -152,6 +157,7 @@ func parseAdd(args []string) (*models.Task, error) {
 	var date *time.Time
 	var tags []string
 	// we could in theory briefly check os.Args to see whether the first two arguments contain strings (for now, assume it does)
+	//TODO: if we have validation functions, we should not check args here, because it is already done in the validation function
 	if len(args) > 0 {
 		description = args[0]
 	} else {

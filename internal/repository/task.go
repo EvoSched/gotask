@@ -16,6 +16,7 @@ var tasks = []*models.Task{
 	models.NewTask(1, "description1", &due, []string{"MA"}),
 	models.NewTask(2, "description2", &due1, []string{"CS"}),
 	models.NewTask(3, "description3", &due2, []string{"MA"}),
+	models.NewTask(4, "description4", nil, []string{"CS"}),
 }
 
 type TaskRepository struct {
