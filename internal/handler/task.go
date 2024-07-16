@@ -3,11 +3,13 @@ package handler
 import (
 	"errors"
 	"fmt"
-	"github.com/EvoSched/gotask/internal/models"
-	"github.com/spf13/cobra"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/EvoSched/gotask/internal/models"
+
+	"github.com/spf13/cobra"
 )
 
 const (
