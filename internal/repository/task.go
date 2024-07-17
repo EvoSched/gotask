@@ -9,14 +9,14 @@ import (
 
 var due = time.Now()
 var due1 = time.Now().AddDate(0, 0, 2)
-var due2 = time.Now().AddDate(0, 0, 4)
+var ts = &models.TimeStamp{&due, &due1}
 
 // sample data to test command functions
 var tasks = []*models.Task{
-	models.NewTask(1, "description1", &due, []string{"MA"}),
-	models.NewTask(2, "description2", &due1, []string{"CS"}),
-	models.NewTask(3, "description3", &due2, []string{"MA"}),
-	models.NewTask(4, "description4", nil, []string{"CS"}),
+	models.NewTask(1, "description1", ts, []string{"MA", "CS"}, 5),
+	models.NewTask(2, "description2", ts, []string{"CS"}, 8),
+	models.NewTask(3, "description3", ts, []string{"MA", "CS"}, 2),
+	models.NewTask(4, "description4", nil, []string{"CH"}, 5),
 }
 
 type TaskRepository struct {

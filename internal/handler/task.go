@@ -1,22 +1,19 @@
 package handler
 
 import (
-	//TODO: sort imports
 	"errors"
 	"fmt"
-	"github.com/EvoSched/gotask/internal/models"
-	"github.com/spf13/cobra"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/EvoSched/gotask/internal/models"
+
+	"github.com/spf13/cobra"
 )
 
 const (
 	DateFmtDMY = "02-01-2006"
-	// DateFmtYMD https://golang.org/pkg/time/#pkg-constants we should use the constants from the time package
-	DateFmtYMD = "2006-01-02"
-	// todo need to add more date formats
-	//		need to support hour, min, sec if the user desires
 )
 
 var dateFormats = []string{DateFmtDMY, time.DateOnly}
@@ -26,7 +23,6 @@ func (h *Handler) RootCmd() *cobra.Command {
 		Use:   "task",
 		Short: "Task manager",
 	}
-
 	return rootCmd
 }
 
@@ -35,10 +31,6 @@ func (h *Handler) AddCmd() *cobra.Command {
 		Use:   "add",
 		Short: "Add a new task",
 		Run: func(cmd *cobra.Command, args []string) {
-			//TODO: move validation of args to parseAdd function
-			if len(args) < 1 {
-				log.Fatal(errors.New("task name is required"))
-			}
 			t, err := parseAdd(args)
 			if err != nil {
 				log.Fatal(err)
@@ -58,7 +50,6 @@ func (h *Handler) GetCmd() *cobra.Command {
 			if len(args) < 1 {
 				log.Fatal(errors.New("task id is required"))
 			}
-
 			var ids []int
 			for _, i := range args {
 				i, err := strconv.Atoi(i)
@@ -129,12 +120,11 @@ func (h *Handler) ListCmd() *cobra.Command {
 
 			fmt.Println("Tasks:")
 			for i, task := range tasks {
-				//TODO: i don't think we should display "nil" here. We should display an empty string, or "N/A" or something
-				str := "nil"
-				if task.Date != nil {
-					str = task.Date.Format(dateFormats[0])
+				str := "N/A"
+				if task.TS != nil {
+					str = task.TS.String()
 				}
-				fmt.Printf("%d. %s %s %s\n", i+1, task.Description, str, task.Tags[0])
+				fmt.Printf("%d. %s %s %s %d\n", i+1, task.Desc, str, task.Tags[0], task.Priority)
 			}
 		},
 	}
@@ -142,48 +132,97 @@ func (h *Handler) ListCmd() *cobra.Command {
 	return listCmd
 }
 
-/*
-grammar:
-
-todo gt add <description> <day> at <time-time> <tag>
-
-todo gt add <description> <date> <time-time> <tag>
-
-gt add <description> <due> <tag> <-- this is what we just finished
-*/
 func parseAdd(args []string) (*models.Task, error) {
-	//TODO: we should validate args here and return an error if they are invalid
-
 	var description string
-	var date *time.Time
 	var tags []string
-	// we could in theory briefly check os.Args to see whether the first two arguments contain strings (for now, assume it does)
+
 	if len(args) > 0 {
 		description = args[0]
 	} else {
 		return nil, errors.New("task name is required")
 	}
 
-	if len(args) > 1 {
-		flg := false
-		for _, arg := range args[1:] {
-			if arg[0] == '+' {
-				tags = append(tags, arg[1:])
-			} else {
-				if flg {
-					return nil, errors.New("invalid command: contains repeat of time argument")
+	var date *time.Time
+	var timeStamp *models.TimeStamp
+	var priority *int
+
+	timeFlg := false
+	priorityFlg := false
+	for i := 1; i < len(args); i++ {
+		if args[i][0] == '+' {
+			tags = append(tags, args[i][1:])
+		} else if !timeFlg && args[i][0] == '@' { // this requires that the time expression be separated from '@' ex. gt add "work" @ 12-3 +MA
+			timeFlg = true
+			c := i + 3
+			j := i + 1
+			for ; j < len(args) && j < c; j++ {
+				t, ts, err := helper(args[j])
+				if err != nil && date == nil && timeStamp == nil {
+					return nil, err
+				} else if err != nil {
+					continue
 				}
-				flg = true
-				d, err := parseDate(arg)
+				if t != nil {
+					if date != nil {
+						return nil, errors.New("task date already set")
+					}
+					date = t
+				}
+				if ts != nil {
+					if timeStamp != nil {
+						return nil, errors.New("task timestamp already set")
+					}
+					timeStamp = ts
+				}
+			}
+			i = j - 1
+		} else if !priorityFlg && args[i][0] == '%' {
+			priorityFlg = true
+			if len(args[i]) > 1 {
+				p, err := strconv.Atoi(args[i][1:])
 				if err != nil {
 					return nil, err
 				}
-				date = d
+				priority = &p
 			}
+		} else {
+			return nil, errors.New("attempts to use invalid prefix outside of valid set {+, @, %, #}")
+		}
+	}
+	if date != nil && timeStamp != nil {
+		s := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.Start.Hour(), timeStamp.Start.Minute(), 0, 0, time.UTC)
+		e := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.End.Hour(), timeStamp.End.Minute(), 0, 0, time.UTC)
+		timeStamp = &models.TimeStamp{
+			Start: &s,
+			End:   &e,
+		}
+	} else if date != nil {
+		timeStamp = &models.TimeStamp{
+			Start: date,
 		}
 	}
 
-	return models.NewTask(0, description, date, tags), nil
+	// default priority value
+	p := 5
+	if priority != nil {
+		p = *priority
+	}
+
+	return models.NewTask(0, description, timeStamp, tags, p), nil
+}
+
+func helper(s string) (*time.Time, *models.TimeStamp, error) {
+	t, errD := parseDate(s)
+	if errD != nil {
+		t1, t2, errT := parseTimeStamp(s)
+		if errT != nil {
+			return nil, nil, errors.New("attempts to use invalid time statement")
+		}
+		ts := &models.TimeStamp{Start: t1, End: t2}
+		return nil, ts, nil
+	} else {
+		return t, nil, nil
+	}
 }
 
 func parseDate(arg string) (*time.Time, error) {
@@ -225,141 +264,134 @@ func parseDate(arg string) (*time.Time, error) {
 
 func parseTimeStamp(arg string) (*time.Time, *time.Time, error) {
 	hour, colon, minute, am, dash := false, false, false, false, false
-	startHour, endHour, startMinute, endMinute := 0, 0, 0, 0
+	startHour, endHour, startMinute, endMinute := -1, -1, -1, -1
 	startFormat, endFormat := "", ""
 
-	for index := 0; index < len(arg); {
-		currentChar := string(arg[index])
-
-		switch currentChar {
-		case ":":
+	for i := 0; i < len(arg); i++ {
+		switch arg[i] {
+		case ':':
 			if !hour || minute {
-				return &time.Time{}, &time.Time{}, errors.New("colon cannot occur before hour or after minute")
+				return nil, nil, fmt.Errorf("colon is expected after hour, not minute: %s", arg)
+			} else if am {
+				return nil, nil, fmt.Errorf("colon can never occur after 'am' or 'pm': %s", arg)
+			} else if colon {
+				return nil, nil, fmt.Errorf("colons cannot be duplicated for same hour, minute combination: %s", arg)
 			}
-
-			if colon {
-				return &time.Time{}, &time.Time{}, errors.New("colon cannot occur more than once in a given time")
-			}
-
 			colon = true
-
-			index++
-		case "-":
+		case '-':
 			if !hour || dash {
-				return &time.Time{}, &time.Time{}, errors.New("dash cannot occur before hour or more than once in a given timestamp")
+				return nil, nil, fmt.Errorf("dashes require an hour and cannot be duplicated: %s", arg)
 			}
-
+			dash = true
 			hour = false
 			colon = false
 			minute = false
 			am = false
-			dash = true
-
-			index++
-		default:
-			if val, err := strconv.Atoi(currentChar); err == nil {
-				if hour && !colon {
-					return &time.Time{}, &time.Time{}, errors.New("hour cannot be more than two digits")
-				}
-
-				if minute {
-					return &time.Time{}, &time.Time{}, errors.New("minute cannot be more than two digits")
-				}
-
-				if am {
-					return &time.Time{}, &time.Time{}, errors.New("digit cannot occur directly after time format")
-				}
-
-				if index+1 >= len(arg) {
-					return &time.Time{}, &time.Time{}, errors.New("invalid digit placement")
-				}
-
-				// If colon is true, then we're currently parsing a minute
-				// If not, we're currently parsing an hour
-				if colon {
-					val_, err := strconv.Atoi(string(arg[index+1]))
-
-					// If dash is true, we're parsing the ending half of the timestamp
-					// If not, we're parsing the starting half
-					if dash {
-						if err != nil {
-							return &time.Time{}, &time.Time{}, errors.New("minute must be more than two digits")
-						} else {
-							endMinute = (val * 10) + val_
-							minute = true
-							index += 2
-						}
-					} else {
-						if err != nil {
-							return &time.Time{}, &time.Time{}, errors.New("minute must be more than two digits")
-						} else {
-							startMinute = (val * 10) + val_
-							minute = true
-							index += 2
-						}
-					}
+		case 'a', 'p':
+			if !hour || am {
+				return nil, nil, fmt.Errorf("'am'/'pm' cannot occur without an hour nor can there be duplicates: %s", arg)
+			}
+			if i+1 < len(arg) && arg[i+1] == 'm' {
+				s := arg[i : i+2]
+				if !dash {
+					startFormat = s
 				} else {
-					if dash {
-						endHour = (endHour * 10) + val
-						hour = true
-						index++
-					} else {
-						startHour = (startHour * 10) + val
-						hour = true
-						index++
-					}
+					endFormat = s
 				}
 			} else {
-				if !hour {
-					return &time.Time{}, &time.Time{}, errors.New("letter cannot occur before a digit in timestamp")
-				}
-
-				// "AM" must directly follow a minute
-				if !minute {
-					return &time.Time{}, &time.Time{}, errors.New("invalid letter placement in timestamp")
-				}
-
-				if index+1 >= len(arg) {
-					return &time.Time{}, &time.Time{}, errors.New("invalid letter placement")
-				}
-
-				// If dash is true, we're parsing the ending half of the timestamp
-				// If not, we're parsing the starting half
-				if dash {
-					endFormat = string(arg[index : index+2])
-				} else {
-					startFormat = string(arg[index : index+2])
-				}
-
-				am = true
-				index += 2
+				return nil, nil, fmt.Errorf("provided time tag besides valid 'am'/'pm': %s", arg)
 			}
+			am = true
+			i++
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			if hour && !colon {
+				return nil, nil, fmt.Errorf("minutes must be separated by colon from hours: %s", arg)
+			} else if minute {
+				return nil, nil, fmt.Errorf("minutes cannot be duplicated: %s", arg)
+			} else if am {
+				return nil, nil, fmt.Errorf("hours and minutes cannot come after 'am'/'pm' signature: %s", arg)
+			} else if hour {
+				minute = true
+				if i+1 < len(arg) && arg[i+1] >= '0' && arg[i+1] <= '9' {
+					x, _ := strconv.Atoi(arg[i : i+2])
+					if x > 59 {
+						return nil, nil, fmt.Errorf("minutes cannot be greater than 59: %s", arg)
+					}
+					if !dash {
+						startMinute = x
+					} else {
+						endMinute = x
+					}
+					i++
+				} else {
+					return nil, nil, fmt.Errorf("minutes require 2 digits: %s", arg)
+				}
+			} else {
+				hour = true
+				if i+1 >= len(arg) || arg[i+1] < '0' || arg[i+1] > '9' {
+					x, _ := strconv.Atoi(arg[i : i+1])
+					if x > 12 {
+						return nil, nil, fmt.Errorf("hours cannot be greater than 12: %s", arg)
+					}
+					if !dash {
+						startHour = x
+					} else {
+						endHour = x
+					}
+				} else if i+1 < len(arg) && arg[i+1] >= '0' && arg[i+1] <= '9' {
+					x, _ := strconv.Atoi(arg[i : i+2])
+					if x > 12 {
+						return nil, nil, fmt.Errorf("hours cannot be greater than 12: %s", arg)
+					}
+					if !dash {
+						startHour = x
+					} else {
+						endHour = x
+					}
+					i++
+				} else {
+					return nil, nil, fmt.Errorf("minutes require 2 digits: %s", arg)
+				}
+			}
+		default:
+			return nil, nil, fmt.Errorf("invalid time format: %s", arg)
 		}
 	}
 
-	// Convert from 12-hour to 24-hour clock format
-	if startFormat == "pm" {
+	// Convert start time to 24-hour format
+	if startFormat == "pm" && startHour != 12 {
 		startHour += 12
+	} else if startFormat == "am" && startHour == 12 {
+		startHour = 0
 	}
-	if endFormat == "pm" {
+
+	// Convert end time to 24-hour format
+	if endFormat == "pm" && endHour != 12 {
+		endHour += 12
+	} else if endFormat == "am" && endHour == 12 {
+		endHour = 0
+	}
+
+	// Handle cases where endFormat is not provided but endHour is in 12-hour format
+	if endFormat == "" && endHour < startHour {
 		endHour += 12
 	}
 
-	if endHour < startHour {
-		return &time.Time{}, &time.Time{}, errors.New("ending hour must be greater than starting hour")
+	if startHour > endHour || (startHour == endHour && startMinute >= endMinute) {
+		return nil, nil, fmt.Errorf("starting time must be earlier than ending time: %s", arg)
 	}
 
-	if startMinute < 0 || startMinute > 60 {
-		return &time.Time{}, &time.Time{}, errors.New("minute must be a value between 0 and 60")
+	if startMinute == -1 {
+		startMinute = 0
+	}
+	if endMinute == -1 {
+		endMinute = 0
 	}
 
-	if endMinute < 0 || endMinute > 60 {
-		return &time.Time{}, &time.Time{}, errors.New("minute must be a value between 0 and 60")
-	}
-
-	year, month, day := time.Now().Date()
-	startTime := time.Date(year, month, day, startHour, startMinute, 0, 0, time.UTC)
-	endTime := time.Date(year, month, day, endHour, endMinute, 0, 0, time.UTC)
-
-	return &startTime, &endTime, nil
+	fmt.Printf("Start Time: %02d:%02d\n", startHour, startMinute)
+	fmt.Printf("End Time: %02d:%02d\n", endHour, endMinute)
+	t := time.Now()
+	st := time.Date(t.Year(), t.Month(), t.Day(), startHour, startMinute, 0, 0, t.Location())
+	et := time.Date(t.Year(), t.Month(), t.Day(), endHour, endMinute, 0, 0, t.Location())
+	return &st, &et, nil
 }
