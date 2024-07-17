@@ -9,7 +9,15 @@ import (
 	"github.com/EvoSched/gotask/internal/models"
 )
 
-// todo try to use this same function for the 'mod' command (would need to rename this function and add param bool for whether it's add or mod)
+type modtask struct {
+	id       int
+	desc     *string
+	ts       *models.TimeStamp
+	addTags  []string
+	remTags  []string
+	priority *int
+}
+
 func parseTask(args []string) (*models.Task, error) {
 	description := args[0]
 
@@ -63,10 +71,16 @@ func parseTask(args []string) (*models.Task, error) {
 	}
 	if date != nil && timeStamp != nil {
 		s := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.Start.Hour(), timeStamp.Start.Minute(), 0, 0, time.UTC)
-		e := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.End.Hour(), timeStamp.End.Minute(), 0, 0, time.UTC)
-		timeStamp = &models.TimeStamp{
-			Start: &s,
-			End:   &e,
+		if timeStamp.End != nil {
+			e := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.End.Hour(), timeStamp.End.Minute(), 0, 0, time.UTC)
+			timeStamp = &models.TimeStamp{
+				Start: &s,
+				End:   &e,
+			}
+		} else {
+			timeStamp = &models.TimeStamp{
+				Start: &s,
+			}
 		}
 	} else if date != nil {
 		timeStamp = &models.TimeStamp{
@@ -80,6 +94,117 @@ func parseTask(args []string) (*models.Task, error) {
 		p = *priority
 	}
 	return models.NewTask(0, description, timeStamp, tags, p), nil
+}
+
+// todo need to merge this method with 'parseTask' since there's no good reason for both of these to exist simultaneously
+func parseMod(args []string) (*modtask, error) {
+	mt := new(modtask)
+	id, err := strconv.Atoi(args[0])
+	if err != nil {
+		return nil, err
+	}
+	mt.id = id
+
+	var date *time.Time
+	var timeStamp *models.TimeStamp
+
+	descFlg := false
+	timeFlg := false
+	priorityFlg := false
+	for i := 1; i < len(args); i++ {
+		if args[i][0] == '+' {
+			mt.addTags = append(mt.addTags, args[i][1:])
+		} else if args[i][0] == '-' {
+			mt.remTags = append(mt.remTags, args[i][1:])
+		} else if !timeFlg && args[i][0] == '@' { // this requires that the time expression be separated from '@' ex. gt add "work" @ 12-3 +MA
+			timeFlg = true
+			c := i + 3
+			j := i + 1
+			for ; j < len(args) && j < c; j++ {
+				t, ts, err := helper(args[j])
+				if err != nil && date == nil && timeStamp == nil {
+					return nil, err
+				} else if err != nil {
+					continue
+				}
+				if t != nil {
+					if date != nil {
+						return nil, errors.New("task date already set")
+					}
+					date = t
+				}
+				if ts != nil {
+					if timeStamp != nil {
+						return nil, errors.New("task timestamp already set")
+					}
+					timeStamp = ts
+				}
+			}
+			i = j - 1
+		} else if !priorityFlg && args[i][0] == '%' {
+			priorityFlg = true
+			if len(args[i]) > 1 {
+				p, err := strconv.Atoi(args[i][1:])
+				if err != nil {
+					return nil, err
+				}
+				mt.priority = &p
+			}
+		} else if !descFlg {
+			descFlg = true
+			mt.desc = &args[i]
+		} else {
+			return nil, errors.New("attempts to use invalid prefix outside of valid set {+, -, @, %, #}")
+		}
+	}
+	if date != nil && timeStamp != nil {
+		s := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.Start.Hour(), timeStamp.Start.Minute(), 0, 0, time.UTC)
+		if timeStamp.End != nil {
+			e := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.End.Hour(), timeStamp.End.Minute(), 0, 0, time.UTC)
+			timeStamp = &models.TimeStamp{
+				Start: &s,
+				End:   &e,
+			}
+		} else {
+			timeStamp = &models.TimeStamp{
+				Start: &s,
+			}
+		}
+	} else if date != nil {
+		timeStamp = &models.TimeStamp{
+			Start: date,
+		}
+	}
+
+	return mt, nil
+}
+
+func parseList(args []string) ([]string, *models.TimeStamp, error) {
+	return nil, nil, nil
+}
+
+func parseGet(args []string) (*models.Task, error) {
+	return nil, nil
+}
+
+func parseCom(args []string) ([]int, error) {
+	var ids []int
+	for _, arg := range args {
+		id, err := strconv.Atoi(arg)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
+}
+
+func parseNote(args []string) (int, string, error) {
+	id, err := strconv.Atoi(args[0])
+	if err != nil {
+		return 0, "", errors.New("invalid number type entered for 'note' command")
+	}
+	return id, args[1], nil
 }
 
 func parseDate(arg string) (*time.Time, error) {
@@ -144,11 +269,11 @@ func parseTimeStamp(arg string) (*time.Time, *time.Time, error) {
 			colon = false
 			minute = false
 			am = false
-		case 'a', 'p':
+		case 'a', 'A', 'p', 'P':
 			if !hour || am {
 				return nil, nil, fmt.Errorf("'am'/'pm' cannot occur without an hour nor can there be duplicates: %s", arg)
 			}
-			if i+1 < len(arg) && arg[i+1] == 'm' {
+			if i+1 < len(arg) && (arg[i+1] == 'm' || arg[i+1] == 'M') {
 				s := arg[i : i+2]
 				if !dash {
 					startFormat = s
@@ -220,6 +345,14 @@ func parseTimeStamp(arg string) (*time.Time, *time.Time, error) {
 		startHour += 12
 	} else if startFormat == "am" && startHour == 12 {
 		startHour = 0
+	}
+
+	// if we only have the first part of the timestamp
+	if endHour == -1 {
+		fmt.Printf("Start Time: %02d:%02d\n", startHour, startMinute)
+		t := time.Now()
+		st := time.Date(t.Year(), t.Month(), t.Day(), startHour, startMinute, 0, 0, t.Location())
+		return &st, nil, nil
 	}
 
 	// Convert end time to 24-hour format

@@ -95,7 +95,31 @@ func (h *Handler) ModCmd() *cobra.Command {
 		Use:   "mod",
 		Short: "Modify a task by ID",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("modifies task")
+			mt, err := parseMod(args)
+			if err != nil {
+				log.Fatal(err)
+			}
+			t, err := h.service.GetTask(mt.id)
+			if err != nil {
+				return
+			}
+			if mt.desc != nil {
+				t.Desc = *mt.desc
+			}
+			if mt.ts != nil {
+				t.TS = mt.ts
+			}
+			if mt.remTags != nil {
+				// remove tags here
+			}
+			if mt.addTags != nil {
+				// need to ensure that tag doesn't currently exist
+				t.Tags = append(t.Tags, mt.addTags...)
+			}
+			if mt.priority != nil {
+				t.Priority = *mt.priority
+			}
+			fmt.Println("Task:", t)
 		},
 	}
 	return editCmd
@@ -105,20 +129,18 @@ func (h *Handler) NoteCmd() *cobra.Command {
 	comCmd := &cobra.Command{
 		Use:   "note",
 		Short: "Notes a task by ID",
+		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				log.Fatal(errors.New("argument mismatch for comment command"))
-			}
-			id, err := strconv.Atoi(args[0])
+			id, n, err := parseNote(args)
 			if err != nil {
 				log.Fatal(err)
 			}
 			task, err := h.service.GetTask(id)
 			if err != nil {
-				return
+				log.Fatal(err)
 			}
 			fmt.Println(task)
-			fmt.Println("Note: ", args[1])
+			fmt.Println("Note:", n)
 		},
 	}
 	return comCmd
@@ -153,8 +175,14 @@ func (h *Handler) ComCmd() *cobra.Command {
 	comCmd := &cobra.Command{
 		Use:   "com",
 		Short: "Complete a task by ID",
+		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("Complete task by ID")
+			ids, err := parseCom(args)
+			if err != nil {
+				return
+			}
+			fmt.Println(ids, "complete...")
 		},
 	}
 	return comCmd
@@ -166,6 +194,11 @@ func (h *Handler) IncomCmd() *cobra.Command {
 		Short: "Incomplete a task by ID",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("Incomplete task by ID")
+			ids, err := parseCom(args)
+			if err != nil {
+				return
+			}
+			fmt.Println(ids, "incomplete...")
 		},
 	}
 	return incomCmd
