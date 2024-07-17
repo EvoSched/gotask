@@ -1,11 +1,9 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
 	"github.com/EvoSched/gotask/internal/models"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -52,20 +50,12 @@ gt add "Setup database" @ 11-3 +project
 			if err != nil {
 				log.Fatal(err)
 			}
-			t := new(models.Task)
-			t.ID = 0
-			t.Desc = *ti.desc
-			if ti.priority != nil {
-				t.Priority = *ti.priority
+			if ti.priority == nil {
+				p := 5
+				ti.priority = &p
 			}
-			t.Tags = ti.addTags
-			if ti.StartAt != nil {
-				t.StartAt = ti.StartAt
-			}
-			if ti.EndAt != nil {
-				t.EndAt = ti.EndAt
-			}
-			fmt.Println(t)
+			t := models.NewTask(0, *ti.desc, *ti.priority, ti.addTags, nil, ti.startAt, ti.endAt)
+			models.DisplayTask(t)
 		},
 	}
 
@@ -76,29 +66,21 @@ func (h *Handler) GetCmd() *cobra.Command {
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get tasks by ID",
+		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) < 1 {
-				log.Fatal(errors.New("task id is required"))
+			ids, err := parseGet(args)
+			if err != nil {
+				log.Fatal(err)
 			}
-			var ids []int
-			for _, i := range args {
-				i, err := strconv.Atoi(i)
-				if err != nil {
-					log.Fatal(err)
-				}
-				ids = append(ids, i)
-			}
-
 			for _, i := range ids {
 				t, err := h.service.GetTask(i)
 				if err != nil {
 					log.Fatal(err)
 				}
-				fmt.Println("Task:", t)
+				fmt.Println(t)
 			}
 		},
 	}
-
 	return getCmd
 }
 

@@ -5,15 +5,13 @@ import (
 	"fmt"
 	"strconv"
 	"time"
-
-	"github.com/EvoSched/gotask/internal/models"
 )
 
 type taskInfo struct {
-	id       int
+	id       *int
 	desc     *string
-	StartAt  *time.Time
-	EndAt    *time.Time
+	startAt  *time.Time
+	endAt    *time.Time
 	addTags  []string
 	remTags  []string
 	priority *int
@@ -26,17 +24,21 @@ type timeStamp struct {
 
 func parseTask(args []string, isAdd bool) (*taskInfo, error) {
 	task := new(taskInfo)
-	startIdx := 0
 	if isAdd {
 		task.desc = &args[0]
-		startIdx++
+	} else {
+		id, err := strconv.Atoi(args[0])
+		if err != nil {
+			return nil, err
+		}
+		task.id = &id
 	}
 
 	var date *time.Time
 	var tStmp *timeStamp
 	timeFlg := false
 
-	for i := startIdx; i < len(args); i++ {
+	for i := 1; i < len(args); i++ {
 		if args[i][0] == '+' {
 			task.addTags = append(task.addTags, args[i][1:])
 		} else if args[i][0] == '-' && !isAdd {
@@ -86,23 +88,18 @@ func parseTask(args []string, isAdd bool) (*taskInfo, error) {
 		s := time.Date(date.Year(), date.Month(), date.Day(), tStmp.start.Hour(), tStmp.start.Minute(), 0, 0, time.UTC)
 		if tStmp.end != nil {
 			e := time.Date(date.Year(), date.Month(), date.Day(), tStmp.end.Hour(), tStmp.end.Minute(), 0, 0, time.UTC)
-			task.StartAt = &s
-			task.EndAt = &e
+			task.startAt = &s
+			task.endAt = &e
 		} else {
-			task.StartAt = &s
+			task.startAt = &s
 		}
 	} else if date != nil {
-		task.StartAt = date
+		task.startAt = date
 	} else if tStmp != nil {
-		task.StartAt = tStmp.start
-		task.EndAt = tStmp.end
+		task.startAt = tStmp.start
+		task.endAt = tStmp.end
 	}
 
-	// default priority value
-	if task.priority == nil {
-		p := 5
-		task.priority = &p
-	}
 	return task, nil
 }
 
@@ -110,8 +107,16 @@ func parseList(args []string) ([]string, *timeStamp, error) {
 	return nil, nil, nil
 }
 
-func parseGet(args []string) (*models.Task, error) {
-	return nil, nil
+func parseGet(args []string) ([]int, error) {
+	var ids []int
+	for _, arg := range args {
+		id, err := strconv.Atoi(arg)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, nil
 }
 
 func parseCom(args []string) ([]int, error) {
@@ -294,9 +299,9 @@ func parseTimeStamp(arg string) (*time.Time, *time.Time, error) {
 
 	// if we only have the first part of the timestamp
 	if endHour == -1 {
-		fmt.Printf("Start Time: %02d:%02d\n", startHour, startMinute)
+		//fmt.Printf("Start Time: %02d:%02d\n", startHour, startMinute)
 		t := time.Now()
-		st := time.Date(t.Year(), t.Month(), t.Day(), startHour, startMinute, 0, 0, t.Location())
+		st := time.Date(t.Year(), t.Month(), t.Day(), startHour, startMinute, 0, 0, time.UTC)
 		return &st, nil, nil
 	}
 
@@ -318,10 +323,10 @@ func parseTimeStamp(arg string) (*time.Time, *time.Time, error) {
 		return nil, nil, fmt.Errorf("starting time must be earlier than ending time: %s", arg)
 	}
 
-	fmt.Printf("Start Time: %02d:%02d\n", startHour, startMinute)
-	fmt.Printf("End Time: %02d:%02d\n", endHour, endMinute)
+	//fmt.Printf("Start Time: %02d:%02d\n", startHour, startMinute)
+	//fmt.Printf("End Time: %02d:%02d\n", endHour, endMinute)
 	t := time.Now()
-	st := time.Date(t.Year(), t.Month(), t.Day(), startHour, startMinute, 0, 0, t.Location())
-	et := time.Date(t.Year(), t.Month(), t.Day(), endHour, endMinute, 0, 0, t.Location())
+	st := time.Date(t.Year(), t.Month(), t.Day(), startHour, startMinute, 0, 0, time.UTC)
+	et := time.Date(t.Year(), t.Month(), t.Day(), endHour, endMinute, 0, 0, time.UTC)
 	return &st, &et, nil
 }

@@ -2,20 +2,16 @@ package repository
 
 import (
 	"database/sql"
-	"time"
 
 	"github.com/EvoSched/gotask/internal/models"
 )
 
-var due = time.Now()
-var due1 = time.Now().AddDate(0, 0, 2)
-
 // sample data to test command functions
 var tasks = []*models.Task{
-	models.NewTask(1, "description1", nil, []string{"MA", "CS"}, 5),
-	models.NewTask(2, "description2", nil, []string{"CS"}, 8),
-	models.NewTask(3, "description3", nil, []string{"MA", "CS"}, 2),
-	models.NewTask(4, "description4", nil, []string{"CH"}, 5),
+	models.NewTask(1, "description1", 5, []string{"MA", "CS"}, []string{"comment1"}, nil, nil),
+	models.NewTask(2, "description2", 8, []string{"CS"}, []string{"comment2"}, nil, nil),
+	models.NewTask(3, "description3", 2, []string{"MA", "CS"}, []string{"comment3"}, nil, nil),
+	models.NewTask(4, "description4", 5, []string{"CH"}, []string{"comment4"}, nil, nil),
 }
 
 type TaskRepository struct {

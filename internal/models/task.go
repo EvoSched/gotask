@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -23,10 +25,38 @@ type Task struct {
 //task_tags
 //tag_id, taks_id
 
-//func (t *TimeStamp) String() string {
-//	return fmt.Sprintf("%s: %s-%s", t.Start.Format("02-01-2006"), t.Start.Format(time.Kitchen), t.End.Format(time.Kitchen))
-//}
+func NewTask(id int, desc string, priority int, tags []string, comments []string, startAt *time.Time, endAt *time.Time) *Task {
+	now := time.Now()
+	return &Task{
+		ID:        id,
+		Desc:      desc,
+		Priority:  priority,
+		Tags:      tags,
+		Comments:  comments,
+		StartAt:   startAt,
+		EndAt:     endAt,
+		CreatedAt: &now,
+		UpdatedAt: &now,
+	}
+}
 
-func NewTask(id int, description string, ts *time.Time, tags []string, priority int) *Task {
-	return nil
+// DisplayTask todo temporary for displaying task data (used for testing at the moment)
+func DisplayTask(task *Task) {
+	// Print header
+	fmt.Printf("%-5s %-30s %-10s %-15s %-25s %-25s\n", "ID", "Desc", "Priority", "Tags", "StartAt", "EndAt")
+
+	// Print task details
+	tags := strings.Join(task.Tags, ", ")
+	fmt.Printf("%-5d %-30s %-10d %-15s", task.ID, task.Desc, task.Priority, tags)
+	if task.StartAt != nil {
+		fmt.Printf(" %-25s", task.StartAt.Format(time.RFC3339))
+	} else {
+		fmt.Printf(" %-25s", "N/A")
+	}
+	if task.EndAt != nil {
+		fmt.Printf(" %-25s", task.EndAt.Format(time.RFC3339))
+	} else {
+		fmt.Printf(" %-25s", "N/A")
+	}
+	fmt.Println()
 }
