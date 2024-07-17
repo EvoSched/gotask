@@ -3,11 +3,10 @@ package handler
 import (
 	"errors"
 	"fmt"
+	"github.com/EvoSched/gotask/internal/models"
 	"log"
 	"strconv"
 	"time"
-
-	"github.com/EvoSched/gotask/internal/models"
 
 	"github.com/spf13/cobra"
 )
@@ -49,9 +48,22 @@ gt add "Setup database" @ 11-3 +project
 `,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			t, err := parseTask(args)
+			ti, err := parseTask(args, true)
 			if err != nil {
 				log.Fatal(err)
+			}
+			t := new(models.Task)
+			t.ID = 0
+			t.Desc = *ti.desc
+			if ti.priority != nil {
+				t.Priority = *ti.priority
+			}
+			t.Tags = ti.addTags
+			if ti.StartAt != nil {
+				t.StartAt = ti.StartAt
+			}
+			if ti.EndAt != nil {
+				t.EndAt = ti.EndAt
 			}
 			fmt.Println(t)
 		},
@@ -95,31 +107,15 @@ func (h *Handler) ModCmd() *cobra.Command {
 		Use:   "mod",
 		Short: "Modify a task by ID",
 		Run: func(cmd *cobra.Command, args []string) {
-			mt, err := parseMod(args)
+			ti, err := parseTask(args, false)
 			if err != nil {
 				log.Fatal(err)
 			}
-			t, err := h.service.GetTask(mt.id)
-			if err != nil {
-				return
-			}
-			if mt.desc != nil {
-				t.Desc = *mt.desc
-			}
-			if mt.ts != nil {
-				t.TS = mt.ts
-			}
-			if mt.remTags != nil {
-				// remove tags here
-			}
-			if mt.addTags != nil {
-				// need to ensure that tag doesn't currently exist
-				t.Tags = append(t.Tags, mt.addTags...)
-			}
-			if mt.priority != nil {
-				t.Priority = *mt.priority
-			}
-			fmt.Println("Task:", t)
+			//t, err := h.service.GetTask(ti.id)
+			//if err != nil {
+			//	return
+			//}
+			fmt.Println("Task:", ti)
 		},
 	}
 	return editCmd
@@ -151,21 +147,21 @@ func (h *Handler) ListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List all tasks",
 		Run: func(cmd *cobra.Command, args []string) {
-			tasks, err := h.service.GetTasks()
-			if err != nil {
-				fmt.Println("Error fetching tasks")
-				log.Fatal(err)
-				return
-			}
-
-			fmt.Println("Tasks:")
-			for i, task := range tasks {
-				str := "N/A"
-				if task.TS != nil {
-					str = task.TS.String()
-				}
-				fmt.Printf("%d. %s %s %s %d\n", i+1, task.Desc, str, task.Tags[0], task.Priority)
-			}
+			//tasks, err := h.service.GetTasks()
+			//if err != nil {
+			//	fmt.Println("Error fetching tasks")
+			//	log.Fatal(err)
+			//	return
+			//}
+			//
+			//fmt.Println("Tasks:")
+			//for i, task := range tasks {
+			//	str := "N/A"
+			//	if task.TS != nil {
+			//		str = task.TS.String()
+			//	}
+			//	fmt.Printf("%d. %s %s %s %d\n", i+1, task.Desc, str, task.Tags[0], task.Priority)
+			//}
 		},
 	}
 	return listCmd
@@ -202,18 +198,4 @@ func (h *Handler) IncomCmd() *cobra.Command {
 		},
 	}
 	return incomCmd
-}
-
-func helper(s string) (*time.Time, *models.TimeStamp, error) {
-	t, errD := parseDate(s)
-	if errD != nil {
-		t1, t2, errT := parseTimeStamp(s)
-		if errT != nil {
-			return nil, nil, errors.New("attempts to use invalid time statement")
-		}
-		ts := &models.TimeStamp{Start: t1, End: t2}
-		return nil, ts, nil
-	} else {
-		return t, nil, nil
-	}
 }

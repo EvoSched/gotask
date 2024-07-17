@@ -9,13 +9,12 @@ import (
 
 var due = time.Now()
 var due1 = time.Now().AddDate(0, 0, 2)
-var ts = &models.TimeStamp{&due, &due1}
 
 // sample data to test command functions
 var tasks = []*models.Task{
-	models.NewTask(1, "description1", ts, []string{"MA", "CS"}, 5),
-	models.NewTask(2, "description2", ts, []string{"CS"}, 8),
-	models.NewTask(3, "description3", ts, []string{"MA", "CS"}, 2),
+	models.NewTask(1, "description1", nil, []string{"MA", "CS"}, 5),
+	models.NewTask(2, "description2", nil, []string{"CS"}, 8),
+	models.NewTask(3, "description3", nil, []string{"MA", "CS"}, 2),
 	models.NewTask(4, "description4", nil, []string{"CH"}, 5),
 }
 
