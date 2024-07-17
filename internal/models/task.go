@@ -40,11 +40,21 @@ func NewTask(id int, desc string, priority int, tags []string, comments []string
 	}
 }
 
-// DisplayTask todo temporary for displaying task data (used for testing at the moment)
 func DisplayTask(task *Task) {
 	// Print header
 	fmt.Printf("%-5s %-30s %-10s %-15s %-25s %-25s\n", "ID", "Desc", "Priority", "Tags", "StartAt", "EndAt")
+	fmtTask(task)
+}
 
+func DisplayTasks(task []*Task) {
+	// Print header
+	fmt.Printf("%-5s %-30s %-10s %-15s %-25s %-25s\n", "ID", "Desc", "Priority", "Tags", "StartAt", "EndAt")
+	for _, t := range task {
+		fmtTask(t)
+	}
+}
+
+func fmtTask(task *Task) {
 	// Print task details
 	tags := strings.Join(task.Tags, ", ")
 	fmt.Printf("%-5d %-30s %-10d %-15s", task.ID, task.Desc, task.Priority, tags)

@@ -72,13 +72,15 @@ func (h *Handler) GetCmd() *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
+			var tasks []*models.Task
 			for _, i := range ids {
 				t, err := h.service.GetTask(i)
 				if err != nil {
 					log.Fatal(err)
 				}
-				fmt.Println(t)
+				tasks = append(tasks, t)
 			}
+			models.DisplayTasks(tasks)
 		},
 	}
 	return getCmd
@@ -93,11 +95,27 @@ func (h *Handler) ModCmd() *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
-			//t, err := h.service.GetTask(ti.id)
-			//if err != nil {
-			//	return
-			//}
-			fmt.Println("Task:", ti)
+			t, err := h.service.GetTask(*ti.id)
+			if err != nil {
+				return
+			}
+
+			if ti.desc != nil {
+				t.Desc = *ti.desc
+			}
+			if ti.priority != nil {
+				t.Priority = *ti.priority
+			}
+			if ti.addTags != nil {
+				t.Tags = append(t.Tags, ti.addTags...)
+			}
+			if ti.startAt != nil {
+				t.StartAt = ti.startAt
+			}
+			if ti.endAt != nil {
+				t.EndAt = ti.endAt
+			}
+			models.DisplayTask(t)
 		},
 	}
 	return editCmd
@@ -113,11 +131,11 @@ func (h *Handler) NoteCmd() *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
-			task, err := h.service.GetTask(id)
+			t, err := h.service.GetTask(id)
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println(task)
+			models.DisplayTask(t)
 			fmt.Println("Note:", n)
 		},
 	}
@@ -129,21 +147,11 @@ func (h *Handler) ListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List all tasks",
 		Run: func(cmd *cobra.Command, args []string) {
-			//tasks, err := h.service.GetTasks()
-			//if err != nil {
-			//	fmt.Println("Error fetching tasks")
-			//	log.Fatal(err)
-			//	return
-			//}
-			//
-			//fmt.Println("Tasks:")
-			//for i, task := range tasks {
-			//	str := "N/A"
-			//	if task.TS != nil {
-			//		str = task.TS.String()
-			//	}
-			//	fmt.Printf("%d. %s %s %s %d\n", i+1, task.Desc, str, task.Tags[0], task.Priority)
-			//}
+			t, err := h.service.GetTasks()
+			if err != nil {
+				log.Fatal(err)
+			}
+			models.DisplayTasks(t)
 		},
 	}
 	return listCmd
@@ -158,7 +166,7 @@ func (h *Handler) ComCmd() *cobra.Command {
 			fmt.Println("Complete task by ID")
 			ids, err := parseCom(args)
 			if err != nil {
-				return
+				log.Fatal(err)
 			}
 			fmt.Println(ids, "complete...")
 		},
@@ -174,7 +182,7 @@ func (h *Handler) IncomCmd() *cobra.Command {
 			fmt.Println("Incomplete task by ID")
 			ids, err := parseCom(args)
 			if err != nil {
-				return
+				log.Fatal(err)
 			}
 			fmt.Println(ids, "incomplete...")
 		},

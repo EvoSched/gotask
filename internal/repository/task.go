@@ -2,16 +2,22 @@ package repository
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/EvoSched/gotask/internal/models"
 )
 
+var curr = time.Now()
+var start = time.Date(curr.Year(), curr.Month(), curr.Day(), 13, 15, 0, 0, time.UTC)
+var end = time.Date(curr.Year(), curr.Month(), curr.Day(), 15, 30, 0, 0, time.UTC)
+var date = time.Date(curr.Year(), curr.Month(), curr.Day(), 23, 59, 0, 0, time.UTC)
+
 // sample data to test command functions
 var tasks = []*models.Task{
-	models.NewTask(1, "description1", 5, []string{"MA", "CS"}, []string{"comment1"}, nil, nil),
-	models.NewTask(2, "description2", 8, []string{"CS"}, []string{"comment2"}, nil, nil),
-	models.NewTask(3, "description3", 2, []string{"MA", "CS"}, []string{"comment3"}, nil, nil),
-	models.NewTask(4, "description4", 5, []string{"CH"}, []string{"comment4"}, nil, nil),
+	models.NewTask(1, "finish project3", 5, []string{"MA", "CS"}, []string{"comment1"}, &start, nil),
+	models.NewTask(2, "study BSTs", 8, []string{"CS"}, []string{"comment2"}, &start, &end),
+	models.NewTask(3, "lunch with Edgar", 2, []string{"Fun"}, []string{"comment3"}, nil, nil),
+	models.NewTask(4, "meeting for db proposal", 5, []string{"Project"}, []string{"comment4"}, &date, nil),
 }
 
 type TaskRepository struct {
