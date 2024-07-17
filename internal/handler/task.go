@@ -30,6 +30,22 @@ func (h *Handler) AddCmd() *cobra.Command {
 	addCmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add a new task",
+		Long: `Adds a new task with the provided description. Additional options include specifying time expression, tags, and priority.
+
+Required:
+- description: Description of the task to be added.
+
+Optional:
+- time: '@' marks the beginning of the time expression (halts when encountering non-time token).
+- tag: Tag for categorizing the task, prefixed with '+'.
+- priority: Priority level for the task from 1 to 10 (min-max), prefixed with '%'.
+
+Example usages:
+gt add 'Write up ReadMe'
+gt add 'Finish documentation' +work %8 @ 11-01-2024 10am-4:15
+gt add "Setup database" @ 11-3 +project
+`,
+		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			t, err := parseAdd(args)
 			if err != nil {
@@ -83,10 +99,10 @@ func (h *Handler) ModCmd() *cobra.Command {
 	return editCmd
 }
 
-func (h *Handler) ComCmd() *cobra.Command {
+func (h *Handler) NoteCmd() *cobra.Command {
 	comCmd := &cobra.Command{
-		Use:   "com",
-		Short: "Comment a task by ID",
+		Use:   "note",
+		Short: "Notes a task by ID",
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) != 2 {
 				log.Fatal(errors.New("argument mismatch for comment command"))
@@ -100,7 +116,7 @@ func (h *Handler) ComCmd() *cobra.Command {
 				return
 			}
 			fmt.Println(task)
-			fmt.Println("Comment: ", args[1])
+			fmt.Println("Note: ", args[1])
 		},
 	}
 	return comCmd
@@ -128,20 +144,35 @@ func (h *Handler) ListCmd() *cobra.Command {
 			}
 		},
 	}
-
 	return listCmd
 }
 
-func parseAdd(args []string) (*models.Task, error) {
-	var description string
-	var tags []string
-
-	if len(args) > 0 {
-		description = args[0]
-	} else {
-		return nil, errors.New("task name is required")
+func (h *Handler) ComCmd() *cobra.Command {
+	comCmd := &cobra.Command{
+		Use:   "com",
+		Short: "Complete a task by ID",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Complete task by ID")
+		},
 	}
+	return comCmd
+}
 
+func (h *Handler) IncomCmd() *cobra.Command {
+	incomCmd := &cobra.Command{
+		Use:   "incom",
+		Short: "Incomplete a task by ID",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Incomplete task by ID")
+		},
+	}
+	return incomCmd
+}
+
+func parseAdd(args []string) (*models.Task, error) {
+	description := args[0]
+
+	var tags []string
 	var date *time.Time
 	var timeStamp *models.TimeStamp
 	var priority *int
