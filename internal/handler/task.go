@@ -222,3 +222,49 @@ func (h *Handler) UndoCmd() *cobra.Command {
 	}
 	return undoCmd
 }
+
+func (h *Handler) DeleteCmd() *cobra.Command {
+	deleteCmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Deletes tasks by ID",
+		Args:  cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			/*
+				Preparing to delete tasks with IDs: 1, 3, 5
+				  - Task 1: 'finish some work'
+				  - Task 3: 'study BSTs'
+				  - Task 5: 'clean the house'
+
+				Are you sure you want to delete these tasks? (y/n):
+			*/
+		},
+	}
+	return deleteCmd
+}
+
+func (h *Handler) ImportCmd() *cobra.Command {
+	importCmd := &cobra.Command{
+		Use:   "import",
+		Short: "Import tasks from a file",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Importing tasks from '%s'...\n", args[0])
+			fmt.Println("  - 10 tasks found in the file\n  - 9 tasks successfully imported\n  - 1 task skipped (duplicate ID: 5)\n\nImport complete. 9 tasks added.")
+		},
+	}
+	return importCmd
+}
+
+func (h *Handler) ExportCmd() *cobra.Command {
+	exportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "Export tasks to file",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Exporting tasks to '%s'...\n", args[0])
+			fmt.Printf("  - 15 tasks exported\n\n")
+			fmt.Printf("Export complete. All tasks saved to '%s'.\n", args[0])
+		},
+	}
+	return exportCmd
+}
