@@ -54,8 +54,8 @@ gt add "Setup database" @ 11-3 +project
 				p := 5
 				ti.priority = &p
 			}
-			t := models.NewTask(0, *ti.desc, *ti.priority, ti.addTags, nil, ti.startAt, ti.endAt)
-			models.DisplayTask(t)
+			t := models.NewTask(1, *ti.desc, *ti.priority, ti.addTags, nil, ti.startAt, ti.endAt)
+			fmt.Printf("Added task %d.\n", t.ID)
 		},
 	}
 
@@ -162,12 +162,18 @@ func (h *Handler) ComCmd() *cobra.Command {
 		Short: "Complete a task by ID",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Complete task by ID")
 			ids, err := parseCom(args)
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println(ids, "complete...")
+			for _, i := range ids {
+				t, err := h.service.GetTask(i)
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("Completed task %d '%s'.\n", i, t.Desc)
+			}
+			fmt.Printf("Completed %d tasks.\n", len(ids))
 		},
 	}
 	return comCmd
