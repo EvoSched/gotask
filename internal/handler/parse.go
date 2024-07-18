@@ -119,7 +119,7 @@ func parseGet(args []string) ([]int, error) {
 	return ids, nil
 }
 
-func parseCom(args []string) ([]int, error) {
+func parseDone(args []string) ([]int, error) {
 	var ids []int
 	for _, arg := range args {
 		id, err := strconv.Atoi(arg)

@@ -156,13 +156,13 @@ func (h *Handler) ListCmd() *cobra.Command {
 	return listCmd
 }
 
-func (h *Handler) ComCmd() *cobra.Command {
-	comCmd := &cobra.Command{
-		Use:   "com",
-		Short: "Complete a task by ID",
+func (h *Handler) DoneCmd() *cobra.Command {
+	doneCmd := &cobra.Command{
+		Use:   "done",
+		Short: "Marks task as complete by ID",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			ids, err := parseCom(args)
+			ids, err := parseDone(args)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -171,26 +171,40 @@ func (h *Handler) ComCmd() *cobra.Command {
 				if err != nil {
 					log.Fatal(err)
 				}
-				fmt.Printf("Completed task %d '%s'.\n", i, t.Desc)
+				fmt.Printf("Finished task %d '%s'.\n", i, t.Desc)
 			}
-			fmt.Printf("Completed %d tasks.\n", len(ids))
+			if len(ids) > 1 {
+				fmt.Printf("Finished %d tasks.\n", len(ids))
+			} else {
+				fmt.Printf("Finished 1 task.\n")
+			}
 		},
 	}
-	return comCmd
+	return doneCmd
 }
 
-func (h *Handler) IncomCmd() *cobra.Command {
-	incomCmd := &cobra.Command{
-		Use:   "incom",
-		Short: "Incomplete a task by ID",
+func (h *Handler) UndoCmd() *cobra.Command {
+	undoCmd := &cobra.Command{
+		Use:   "undo",
+		Short: "Marks task as incomplete by ID",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Incomplete task by ID")
-			ids, err := parseCom(args)
+			ids, err := parseDone(args)
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println(ids, "incomplete...")
+			for _, i := range ids {
+				t, err := h.service.GetTask(i)
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("Reverted task %d '%s' to incomplete.\n", i, t.Desc)
+			}
+			if len(ids) > 1 {
+				fmt.Printf("Reverted %d tasks.\n", len(ids))
+			} else {
+				fmt.Printf("Reverted 1 task.\n")
+			}
 		},
 	}
-	return incomCmd
+	return undoCmd
 }
