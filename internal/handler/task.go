@@ -98,14 +98,19 @@ func (h *Handler) ModCmd() *cobra.Command {
 			if err != nil {
 				return
 			}
-
+			fmt.Printf("Task %d '%s' has been updated:\n", *ti.id, *ti.desc)
 			if ti.desc != nil {
+				fmt.Printf("  - Description updated to '%s'\n", *ti.desc)
 				t.Desc = *ti.desc
 			}
 			if ti.priority != nil {
+				fmt.Printf("  - Priority updated from %d to %d\n", t.Priority, *ti.priority)
 				t.Priority = *ti.priority
 			}
 			if ti.addTags != nil {
+				for _, tg := range ti.addTags {
+					fmt.Printf("  - Tag added: %s\n", tg)
+				}
 				t.Tags = append(t.Tags, ti.addTags...)
 			}
 			if ti.startAt != nil {
@@ -114,7 +119,15 @@ func (h *Handler) ModCmd() *cobra.Command {
 			if ti.endAt != nil {
 				t.EndAt = ti.endAt
 			}
-			models.DisplayTask(t)
+			if ti.startAt != nil {
+				fmt.Printf("  - Time updated to ")
+				if t.StartAt != nil && t.EndAt != nil {
+					fmt.Printf("%s %s - %s\n", t.StartAt.Format("Mon, 02 Jan 2006"), t.StartAt.Format(time.Kitchen), t.EndAt.Format(time.Kitchen))
+				} else {
+					fmt.Printf("%s %s\n", t.StartAt.Format("Mon, 02 Jan 2006"), t.StartAt.Format(time.Kitchen))
+				}
+			}
+			fmt.Println("Update complete. 1 task modified.")
 		},
 	}
 	return editCmd

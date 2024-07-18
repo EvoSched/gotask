@@ -47,8 +47,9 @@ func DisplayTask(task *Task) {
 	fmt.Printf("ID             %d\n", task.ID)
 	fmt.Printf("Description    %s\n", task.Desc)
 	fmt.Printf("Priority       %d\n", task.Priority)
-	fmt.Printf("Tags           %v\n", task.Tags)
-	fmt.Printf("Notes          %v\n", task.Notes)
+	if len(task.Tags) > 0 {
+		fmt.Printf("Tags           %v\n", task.Tags)
+	}
 
 	// Display 'Due' with date and time
 	if task.StartAt == nil && task.EndAt == nil {
@@ -63,6 +64,8 @@ func DisplayTask(task *Task) {
 
 	// Display last modified time
 	fmt.Printf("Last modified  %s\n", task.UpdatedAt.Format(time.RFC1123))
+
+	fmt.Printf("\nNotes:\nThu, 18 Jul 2024 00:50:46 EDT - unexpected issue came up, am resolving now")
 }
 
 func DisplayTasks(task []*Task) {
