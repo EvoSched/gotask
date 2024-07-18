@@ -78,6 +78,7 @@ func (h *Handler) GetCmd() *cobra.Command {
 					log.Fatal(err)
 				}
 				models.DisplayTask(t)
+				fmt.Println()
 			}
 		},
 	}
