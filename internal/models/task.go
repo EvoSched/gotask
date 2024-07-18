@@ -42,8 +42,25 @@ func NewTask(id int, desc string, priority int, tags []string, comments []string
 
 func DisplayTask(task *Task) {
 	// Print header
-	fmt.Printf("%-5s %-30s %-10s %-15s %-25s %-25s\n", "ID", "Desc", "Priority", "Tags", "StartAt", "EndAt")
-	fmtTask(task)
+	fmt.Println("Task Details:")
+	fmt.Println("--------------")
+	fmt.Printf("ID:            %d\n", task.ID)
+	fmt.Printf("Description:   %s\n", task.Desc)
+	fmt.Printf("Priority:      %d\n", task.Priority)
+	fmt.Printf("Tags:          %v\n", task.Tags)
+	fmt.Printf("Comments:      %v\n", task.Comments)
+	if task.StartAt != nil {
+		fmt.Printf("Start At:      %s\n", task.StartAt.Format(time.RFC3339))
+	} else {
+		fmt.Println("Start At:      <not set>")
+	}
+	if task.EndAt != nil {
+		fmt.Printf("End At:        %s\n", task.EndAt.Format(time.RFC3339))
+	} else {
+		fmt.Println("End At:        <not set>")
+	}
+	fmt.Printf("Created At:    %s\n", task.CreatedAt.Format(time.RFC3339))
+	fmt.Printf("Last modified: %s\n", task.UpdatedAt.Format(time.RFC3339))
 }
 
 func DisplayTasks(task []*Task) {

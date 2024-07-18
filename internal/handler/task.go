@@ -72,15 +72,13 @@ func (h *Handler) GetCmd() *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
-			var tasks []*models.Task
 			for _, i := range ids {
 				t, err := h.service.GetTask(i)
 				if err != nil {
 					log.Fatal(err)
 				}
-				tasks = append(tasks, t)
+				models.DisplayTask(t)
 			}
-			models.DisplayTasks(tasks)
 		},
 	}
 	return getCmd
