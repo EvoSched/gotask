@@ -98,7 +98,7 @@ func (h *Handler) ModCmd() *cobra.Command {
 			if err != nil {
 				return
 			}
-			fmt.Printf("Task %d '%s' has been updated:\n", *ti.id, *ti.desc)
+			fmt.Printf("Task %d '%s' has been updated:\n", t.ID, t.Desc)
 			if ti.desc != nil {
 				fmt.Printf("  - Description updated to '%s'\n", *ti.desc)
 				t.Desc = *ti.desc
