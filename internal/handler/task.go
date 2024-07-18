@@ -147,8 +147,9 @@ func (h *Handler) NoteCmd() *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
-			models.DisplayTask(t)
-			fmt.Println("Note:", n)
+			fmt.Printf("Task %d '%s' has been updated with a new note:\n", t.ID, t.Desc)
+			fmt.Printf("  - Note: \"%s\"\n", n)
+			fmt.Println("1 task updated with a note.")
 		},
 	}
 	return comCmd
