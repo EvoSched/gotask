@@ -11,7 +11,7 @@ type Task struct {
 	Desc      string
 	Priority  int
 	Tags      []string   // tags, tags: string tag1,tag2,tag3
-	Comments  []string   // comment1,comment2,comment3
+	Notes     []string   // comment1,comment2,comment3
 	StartAt   *time.Time // timestamp datetime
 	EndAt     *time.Time
 	CreatedAt *time.Time
@@ -32,7 +32,7 @@ func NewTask(id int, desc string, priority int, tags []string, comments []string
 		Desc:      desc,
 		Priority:  priority,
 		Tags:      tags,
-		Comments:  comments,
+		Notes:     comments,
 		StartAt:   startAt,
 		EndAt:     endAt,
 		CreatedAt: &now,
@@ -44,23 +44,25 @@ func DisplayTask(task *Task) {
 	// Print header
 	fmt.Println("Task Details:")
 	fmt.Println("--------------")
-	fmt.Printf("ID:            %d\n", task.ID)
-	fmt.Printf("Description:   %s\n", task.Desc)
-	fmt.Printf("Priority:      %d\n", task.Priority)
-	fmt.Printf("Tags:          %v\n", task.Tags)
-	fmt.Printf("Comments:      %v\n", task.Comments)
-	if task.StartAt != nil {
-		fmt.Printf("Start At:      %s\n", task.StartAt.Format(time.RFC3339))
+	fmt.Printf("ID             %d\n", task.ID)
+	fmt.Printf("Description    %s\n", task.Desc)
+	fmt.Printf("Priority       %d\n", task.Priority)
+	fmt.Printf("Tags           %v\n", task.Tags)
+	fmt.Printf("Notes          %v\n", task.Notes)
+
+	// Display 'Due' with date and time
+	if task.StartAt == nil && task.EndAt == nil {
+		fmt.Println("Due            <not set>")
+	} else if task.StartAt != nil && task.EndAt != nil {
+		fmt.Printf("Due            %s %s - %s\n", task.StartAt.Format("Mon, 02 Jan 2006"), task.StartAt.Format(time.Kitchen), task.EndAt.Format(time.Kitchen))
+	} else if task.StartAt != nil {
+		fmt.Printf("Due            %s %s\n", task.StartAt.Format("Mon, 02 Jan 2006"), task.StartAt.Format(time.Kitchen))
 	} else {
-		fmt.Println("Start At:      <not set>")
+		fmt.Printf("Due            %s %s\n", task.EndAt.Format("Mon, 02 Jan 2006"), task.EndAt.Format(time.Kitchen))
 	}
-	if task.EndAt != nil {
-		fmt.Printf("End At:        %s\n", task.EndAt.Format(time.RFC3339))
-	} else {
-		fmt.Println("End At:        <not set>")
-	}
-	fmt.Printf("Created At:    %s\n", task.CreatedAt.Format(time.RFC3339))
-	fmt.Printf("Last modified: %s\n", task.UpdatedAt.Format(time.RFC3339))
+
+	// Display last modified time
+	fmt.Printf("Last modified  %s\n", task.UpdatedAt.Format(time.RFC1123))
 }
 
 func DisplayTasks(task []*Task) {
