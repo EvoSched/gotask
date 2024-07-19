@@ -43,5 +43,9 @@ func (r *TaskRepository) GetTask(id int) (*models.Task, error) {
 func (r *TaskRepository) GetTasks() ([]*models.Task, error) {
 	//TODO: sql query
 
+	// todo remove when integrating SQL (this is purely for displaying mock data
+	tasks[1].Finished = true
+	tasks[3].Finished = true
+
 	return tasks, nil
 }
