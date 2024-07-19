@@ -104,7 +104,7 @@ func FormatTask(task *Task) string {
 func DisplayTasks(tasks []*Task) {
 	// Print header
 	fmt.Println("ID  Status  Desc                           Priority   Tags          Due   ")
-	fmt.Println("======================================================================================================")
+	fmt.Println("------------------------------------------------------------------------------------------------------")
 
 	// Print each task
 	for _, task := range tasks {
