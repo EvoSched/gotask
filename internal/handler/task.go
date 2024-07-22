@@ -77,6 +77,11 @@ func (h *Handler) GetCmd() *cobra.Command {
 				if err != nil {
 					log.Fatal(err)
 				}
+				//check if task exists, because of nil pointer dereference
+				if t == nil {
+					fmt.Printf("Task %d not found.\n", i)
+					continue
+				}
 				models.DisplayTask(t)
 				fmt.Println()
 			}
@@ -96,6 +101,11 @@ func (h *Handler) ModCmd() *cobra.Command {
 			}
 			t, err := h.service.GetTask(*ti.id)
 			if err != nil {
+				return
+			}
+			//check if task exists, because of nil pointer dereference
+			if t == nil {
+				fmt.Printf("Task %d not found.\n", *ti.id)
 				return
 			}
 			fmt.Printf("Task %d '%s' has been updated:\n", t.ID, t.Desc)
@@ -147,6 +157,11 @@ func (h *Handler) NoteCmd() *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
+			//check if task exists, because of nil pointer dereference
+			if t == nil {
+				fmt.Printf("Task %d not found.\n", id)
+				return
+			}
 			fmt.Printf("Task %d '%s' has been updated with a new note:\n", t.ID, t.Desc)
 			fmt.Printf("  - Note: \"%s\"\n", n)
 			fmt.Println("1 task updated with a note.")
@@ -185,6 +200,11 @@ func (h *Handler) DoneCmd() *cobra.Command {
 				if err != nil {
 					log.Fatal(err)
 				}
+				//check if task exists, because of nil pointer dereference
+				if t == nil {
+					fmt.Printf("Task %d not found.\n", i)
+					continue
+				}
 				fmt.Printf("Finished task %d '%s'.\n", i, t.Desc)
 			}
 			if len(ids) > 1 {
@@ -210,6 +230,11 @@ func (h *Handler) UndoCmd() *cobra.Command {
 				t, err := h.service.GetTask(i)
 				if err != nil {
 					log.Fatal(err)
+				}
+				//check if task exists, because of nil pointer dereference
+				if t == nil {
+					fmt.Printf("Task %d not found.\n", i)
+					continue
 				}
 				fmt.Printf("Reverted task %d '%s' to incomplete.\n", i, t.Desc)
 			}
