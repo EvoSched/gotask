@@ -7,16 +7,17 @@ import (
 	"github.com/EvoSched/gotask/internal/models"
 )
 
-var due = time.Now()
-var due1 = time.Now().AddDate(0, 0, 2)
-var ts = &models.TimeStamp{&due, &due1}
+var curr = time.Now()
+var start = time.Date(curr.Year(), curr.Month(), curr.Day(), 13, 15, 0, 0, time.UTC)
+var end = time.Date(curr.Year(), curr.Month(), curr.Day(), 15, 30, 0, 0, time.UTC)
+var date = time.Date(curr.Year(), curr.Month(), curr.Day(), 23, 59, 0, 0, time.UTC)
 
 // sample data to test command functions
 var tasks = []*models.Task{
-	models.NewTask(1, "description1", ts, []string{"MA", "CS"}, 5),
-	models.NewTask(2, "description2", ts, []string{"CS"}, 8),
-	models.NewTask(3, "description3", ts, []string{"MA", "CS"}, 2),
-	models.NewTask(4, "description4", nil, []string{"CH"}, 5),
+	models.NewTask(1, "finish project3", 5, []string{"MA", "CS"}, []string{"comment1"}, &start, nil),
+	models.NewTask(2, "study BSTs", 8, []string{"CS"}, []string{"comment2"}, &start, &end),
+	models.NewTask(3, "lunch with Edgar", 2, []string{"Fun"}, []string{"comment3"}, nil, nil),
+	models.NewTask(4, "meeting for db proposal", 5, []string{"Project"}, []string{"comment4"}, &date, nil),
 }
 
 type TaskRepository struct {
@@ -41,6 +42,10 @@ func (r *TaskRepository) GetTask(id int) (*models.Task, error) {
 
 func (r *TaskRepository) GetTasks() ([]*models.Task, error) {
 	//TODO: sql query
+
+	// todo remove when integrating SQL (this is purely for displaying mock data
+	tasks[1].Finished = true
+	tasks[3].Finished = true
 
 	return tasks, nil
 }

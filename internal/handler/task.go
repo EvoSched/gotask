@@ -1,13 +1,10 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
-	"log"
-	"strconv"
-	"time"
-
 	"github.com/EvoSched/gotask/internal/models"
+	"log"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +18,9 @@ var dateFormats = []string{DateFmtDMY, time.DateOnly}
 func (h *Handler) RootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "task",
-		Short: "Task manager",
+		Short: "GoTask",
+		Long: `GoTask is a cli application for managing tasks efficiently. 
+It allows you to add, list, mod, get, complete, and prioritize your tasks with ease.`,
 	}
 	return rootCmd
 }
@@ -30,12 +29,33 @@ func (h *Handler) AddCmd() *cobra.Command {
 	addCmd := &cobra.Command{
 		Use:   "add",
 		Short: "Add a new task",
+		Long: `Adds a new task with the provided description. Additional options include specifying time expression, tags, and priority.
+
+Required:
+- description: Description of the task to be added.
+
+Optional:
+- time: '@' marks the beginning of the time expression (halts when encountering non-time token).
+- tag: Tag for categorizing the task, prefixed with '+'.
+- priority: Priority level for the task from 1 to 10 (min-max), prefixed with '%'.
+
+Example usages:
+gt add 'Write up ReadMe'
+gt add 'Finish documentation' +work %8 @ 11-01-2024 10am-4:15
+gt add "Setup database" @ 11-3 +project
+`,
+		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			t, err := parseAdd(args)
+			ti, err := parseTask(args, true)
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println(t)
+			if ti.priority == nil {
+				p := 5
+				ti.priority = &p
+			}
+			t := models.NewTask(1, *ti.desc, *ti.priority, ti.addTags, nil, ti.startAt, ti.endAt)
+			fmt.Printf("Added task %d.\n", t.ID)
 		},
 	}
 
@@ -46,29 +66,27 @@ func (h *Handler) GetCmd() *cobra.Command {
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get tasks by ID",
+		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) < 1 {
-				log.Fatal(errors.New("task id is required"))
+			ids, err := parseGet(args)
+			if err != nil {
+				log.Fatal(err)
 			}
-			var ids []int
-			for _, i := range args {
-				i, err := strconv.Atoi(i)
-				if err != nil {
-					log.Fatal(err)
-				}
-				ids = append(ids, i)
-			}
-
 			for _, i := range ids {
 				t, err := h.service.GetTask(i)
 				if err != nil {
 					log.Fatal(err)
 				}
-				fmt.Println("Task:", t)
+				//check if task exists, because of nil pointer dereference
+				if t == nil {
+					fmt.Printf("Task %d not found.\n", i)
+					continue
+				}
+				models.DisplayTask(t)
+				fmt.Println()
 			}
 		},
 	}
-
 	return getCmd
 }
 
@@ -77,30 +95,76 @@ func (h *Handler) ModCmd() *cobra.Command {
 		Use:   "mod",
 		Short: "Modify a task by ID",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("modifies task")
+			ti, err := parseTask(args, false)
+			if err != nil {
+				log.Fatal(err)
+			}
+			t, err := h.service.GetTask(*ti.id)
+			if err != nil {
+				return
+			}
+			//check if task exists, because of nil pointer dereference
+			if t == nil {
+				fmt.Printf("Task %d not found.\n", *ti.id)
+				return
+			}
+			fmt.Printf("Task %d '%s' has been updated:\n", t.ID, t.Desc)
+			if ti.desc != nil {
+				fmt.Printf("  - Description updated to '%s'\n", *ti.desc)
+				t.Desc = *ti.desc
+			}
+			if ti.priority != nil {
+				fmt.Printf("  - Priority updated from %d to %d\n", t.Priority, *ti.priority)
+				t.Priority = *ti.priority
+			}
+			if ti.addTags != nil {
+				for _, tg := range ti.addTags {
+					fmt.Printf("  - Tag added: %s\n", tg)
+				}
+				t.Tags = append(t.Tags, ti.addTags...)
+			}
+			if ti.startAt != nil {
+				t.StartAt = ti.startAt
+			}
+			if ti.endAt != nil {
+				t.EndAt = ti.endAt
+			}
+			if ti.startAt != nil {
+				fmt.Printf("  - Time updated to ")
+				if t.StartAt != nil && t.EndAt != nil {
+					fmt.Printf("%s %s - %s\n", t.StartAt.Format("Mon, 02 Jan 2006"), t.StartAt.Format(time.Kitchen), t.EndAt.Format(time.Kitchen))
+				} else {
+					fmt.Printf("%s %s\n", t.StartAt.Format("Mon, 02 Jan 2006"), t.StartAt.Format(time.Kitchen))
+				}
+			}
+			fmt.Println("Update complete. 1 task modified.")
 		},
 	}
 	return editCmd
 }
 
-func (h *Handler) ComCmd() *cobra.Command {
+func (h *Handler) NoteCmd() *cobra.Command {
 	comCmd := &cobra.Command{
-		Use:   "com",
-		Short: "Comment a task by ID",
+		Use:   "note",
+		Short: "Notes a task by ID",
+		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 2 {
-				log.Fatal(errors.New("argument mismatch for comment command"))
-			}
-			id, err := strconv.Atoi(args[0])
+			id, n, err := parseNote(args)
 			if err != nil {
 				log.Fatal(err)
 			}
-			task, err := h.service.GetTask(id)
+			t, err := h.service.GetTask(id)
 			if err != nil {
+				log.Fatal(err)
+			}
+			//check if task exists, because of nil pointer dereference
+			if t == nil {
+				fmt.Printf("Task %d not found.\n", id)
 				return
 			}
-			fmt.Println(task)
-			fmt.Println("Comment: ", args[1])
+			fmt.Printf("Task %d '%s' has been updated with a new note:\n", t.ID, t.Desc)
+			fmt.Printf("  - Note: \"%s\"\n", n)
+			fmt.Println("1 task updated with a note.")
 		},
 	}
 	return comCmd
@@ -111,287 +175,121 @@ func (h *Handler) ListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List all tasks",
 		Run: func(cmd *cobra.Command, args []string) {
-			tasks, err := h.service.GetTasks()
+			t, err := h.service.GetTasks()
 			if err != nil {
-				fmt.Println("Error fetching tasks")
 				log.Fatal(err)
-				return
 			}
-
-			fmt.Println("Tasks:")
-			for i, task := range tasks {
-				str := "N/A"
-				if task.TS != nil {
-					str = task.TS.String()
-				}
-				fmt.Printf("%d. %s %s %s %d\n", i+1, task.Desc, str, task.Tags[0], task.Priority)
-			}
+			models.DisplayTasks(t)
 		},
 	}
-
 	return listCmd
 }
 
-func parseAdd(args []string) (*models.Task, error) {
-	var description string
-	var tags []string
-
-	if len(args) > 0 {
-		description = args[0]
-	} else {
-		return nil, errors.New("task name is required")
-	}
-
-	var date *time.Time
-	var timeStamp *models.TimeStamp
-	var priority *int
-
-	timeFlg := false
-	priorityFlg := false
-	for i := 1; i < len(args); i++ {
-		if args[i][0] == '+' {
-			tags = append(tags, args[i][1:])
-		} else if !timeFlg && args[i][0] == '@' { // this requires that the time expression be separated from '@' ex. gt add "work" @ 12-3 +MA
-			timeFlg = true
-			c := i + 3
-			j := i + 1
-			for ; j < len(args) && j < c; j++ {
-				t, ts, err := helper(args[j])
-				if err != nil && date == nil && timeStamp == nil {
-					return nil, err
-				} else if err != nil {
+func (h *Handler) DoneCmd() *cobra.Command {
+	doneCmd := &cobra.Command{
+		Use:   "done",
+		Short: "Marks task as complete by ID",
+		Args:  cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			ids, err := parseDone(args)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, i := range ids {
+				t, err := h.service.GetTask(i)
+				if err != nil {
+					log.Fatal(err)
+				}
+				//check if task exists, because of nil pointer dereference
+				if t == nil {
+					fmt.Printf("Task %d not found.\n", i)
 					continue
 				}
-				if t != nil {
-					if date != nil {
-						return nil, errors.New("task date already set")
-					}
-					date = t
-				}
-				if ts != nil {
-					if timeStamp != nil {
-						return nil, errors.New("task timestamp already set")
-					}
-					timeStamp = ts
-				}
+				fmt.Printf("Finished task %d '%s'.\n", i, t.Desc)
 			}
-			i = j - 1
-		} else if !priorityFlg && args[i][0] == '%' {
-			priorityFlg = true
-			if len(args[i]) > 1 {
-				p, err := strconv.Atoi(args[i][1:])
+			if len(ids) > 1 {
+				fmt.Printf("Finished %d tasks.\n", len(ids))
+			} else {
+				fmt.Printf("Finished 1 task.\n")
+			}
+		},
+	}
+	return doneCmd
+}
+
+func (h *Handler) UndoCmd() *cobra.Command {
+	undoCmd := &cobra.Command{
+		Use:   "undo",
+		Short: "Marks task as incomplete by ID",
+		Run: func(cmd *cobra.Command, args []string) {
+			ids, err := parseDone(args)
+			if err != nil {
+				log.Fatal(err)
+			}
+			for _, i := range ids {
+				t, err := h.service.GetTask(i)
 				if err != nil {
-					return nil, err
+					log.Fatal(err)
 				}
-				priority = &p
-			}
-		} else {
-			return nil, errors.New("attempts to use invalid prefix outside of valid set {+, @, %, #}")
-		}
-	}
-	if date != nil && timeStamp != nil {
-		s := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.Start.Hour(), timeStamp.Start.Minute(), 0, 0, time.UTC)
-		e := time.Date(date.Year(), date.Month(), date.Day(), timeStamp.End.Hour(), timeStamp.End.Minute(), 0, 0, time.UTC)
-		timeStamp = &models.TimeStamp{
-			Start: &s,
-			End:   &e,
-		}
-	} else if date != nil {
-		timeStamp = &models.TimeStamp{
-			Start: date,
-		}
-	}
-
-	// default priority value
-	p := 5
-	if priority != nil {
-		p = *priority
-	}
-
-	return models.NewTask(0, description, timeStamp, tags, p), nil
-}
-
-func helper(s string) (*time.Time, *models.TimeStamp, error) {
-	t, errD := parseDate(s)
-	if errD != nil {
-		t1, t2, errT := parseTimeStamp(s)
-		if errT != nil {
-			return nil, nil, errors.New("attempts to use invalid time statement")
-		}
-		ts := &models.TimeStamp{Start: t1, End: t2}
-		return nil, ts, nil
-	} else {
-		return t, nil, nil
-	}
-}
-
-func parseDate(arg string) (*time.Time, error) {
-	today := time.Now()
-	switch arg {
-	case "eod":
-		return &today, nil
-	case "eow", "sat":
-		d := today.AddDate(0, 0, int(time.Saturday-today.Weekday()+7)%7)
-		return &d, nil
-	case "sun":
-		d := today.AddDate(0, 0, int(time.Sunday-today.Weekday()+7)%7)
-		return &d, nil
-	case "mon":
-		d := today.AddDate(0, 0, int(time.Monday-today.Weekday()+7)%7)
-		return &d, nil
-	case "tue":
-		d := today.AddDate(0, 0, int(time.Tuesday-today.Weekday()+7)%7)
-		return &d, nil
-	case "wed":
-		d := today.AddDate(0, 0, int(time.Wednesday-today.Weekday()+7)%7)
-		return &d, nil
-	case "thu":
-		d := today.AddDate(0, 0, int(time.Thursday-today.Weekday()+7)%7)
-		return &d, nil
-	case "fri":
-		d := today.AddDate(0, 0, int(time.Friday-today.Weekday()+7)%7)
-		return &d, nil
-	default:
-		for _, v := range dateFormats {
-			t, err := time.Parse(v, arg)
-			if err == nil {
-				return &t, nil
-			}
-		}
-		return nil, fmt.Errorf("invalid date format: %s", arg)
-	}
-}
-
-func parseTimeStamp(arg string) (*time.Time, *time.Time, error) {
-	hour, colon, minute, am, dash := false, false, false, false, false
-	startHour, endHour, startMinute, endMinute := -1, -1, -1, -1
-	startFormat, endFormat := "", ""
-
-	for i := 0; i < len(arg); i++ {
-		switch arg[i] {
-		case ':':
-			if !hour || minute {
-				return nil, nil, fmt.Errorf("colon is expected after hour, not minute: %s", arg)
-			} else if am {
-				return nil, nil, fmt.Errorf("colon can never occur after 'am' or 'pm': %s", arg)
-			} else if colon {
-				return nil, nil, fmt.Errorf("colons cannot be duplicated for same hour, minute combination: %s", arg)
-			}
-			colon = true
-		case '-':
-			if !hour || dash {
-				return nil, nil, fmt.Errorf("dashes require an hour and cannot be duplicated: %s", arg)
-			}
-			dash = true
-			hour = false
-			colon = false
-			minute = false
-			am = false
-		case 'a', 'p':
-			if !hour || am {
-				return nil, nil, fmt.Errorf("'am'/'pm' cannot occur without an hour nor can there be duplicates: %s", arg)
-			}
-			if i+1 < len(arg) && arg[i+1] == 'm' {
-				s := arg[i : i+2]
-				if !dash {
-					startFormat = s
-				} else {
-					endFormat = s
+				//check if task exists, because of nil pointer dereference
+				if t == nil {
+					fmt.Printf("Task %d not found.\n", i)
+					continue
 				}
+				fmt.Printf("Reverted task %d '%s' to incomplete.\n", i, t.Desc)
+			}
+			if len(ids) > 1 {
+				fmt.Printf("Reverted %d tasks.\n", len(ids))
 			} else {
-				return nil, nil, fmt.Errorf("provided time tag besides valid 'am'/'pm': %s", arg)
+				fmt.Printf("Reverted 1 task.\n")
 			}
-			am = true
-			i++
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			if hour && !colon {
-				return nil, nil, fmt.Errorf("minutes must be separated by colon from hours: %s", arg)
-			} else if minute {
-				return nil, nil, fmt.Errorf("minutes cannot be duplicated: %s", arg)
-			} else if am {
-				return nil, nil, fmt.Errorf("hours and minutes cannot come after 'am'/'pm' signature: %s", arg)
-			} else if hour {
-				minute = true
-				if i+1 < len(arg) && arg[i+1] >= '0' && arg[i+1] <= '9' {
-					x, _ := strconv.Atoi(arg[i : i+2])
-					if x > 59 {
-						return nil, nil, fmt.Errorf("minutes cannot be greater than 59: %s", arg)
-					}
-					if !dash {
-						startMinute = x
-					} else {
-						endMinute = x
-					}
-					i++
-				} else {
-					return nil, nil, fmt.Errorf("minutes require 2 digits: %s", arg)
-				}
-			} else {
-				hour = true
-				if i+1 >= len(arg) || arg[i+1] < '0' || arg[i+1] > '9' {
-					x, _ := strconv.Atoi(arg[i : i+1])
-					if x > 12 {
-						return nil, nil, fmt.Errorf("hours cannot be greater than 12: %s", arg)
-					}
-					if !dash {
-						startHour = x
-					} else {
-						endHour = x
-					}
-				} else if i+1 < len(arg) && arg[i+1] >= '0' && arg[i+1] <= '9' {
-					x, _ := strconv.Atoi(arg[i : i+2])
-					if x > 12 {
-						return nil, nil, fmt.Errorf("hours cannot be greater than 12: %s", arg)
-					}
-					if !dash {
-						startHour = x
-					} else {
-						endHour = x
-					}
-					i++
-				} else {
-					return nil, nil, fmt.Errorf("minutes require 2 digits: %s", arg)
-				}
-			}
-		default:
-			return nil, nil, fmt.Errorf("invalid time format: %s", arg)
-		}
+		},
 	}
+	return undoCmd
+}
 
-	// Convert start time to 24-hour format
-	if startFormat == "pm" && startHour != 12 {
-		startHour += 12
-	} else if startFormat == "am" && startHour == 12 {
-		startHour = 0
-	}
+func (h *Handler) DeleteCmd() *cobra.Command {
+	deleteCmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Deletes tasks by ID",
+		Args:  cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			/*
+				Preparing to delete tasks with IDs: 1, 3, 5
+				  - Task 1: 'finish some work'
+				  - Task 3: 'study BSTs'
+				  - Task 5: 'clean the house'
 
-	// Convert end time to 24-hour format
-	if endFormat == "pm" && endHour != 12 {
-		endHour += 12
-	} else if endFormat == "am" && endHour == 12 {
-		endHour = 0
+				Are you sure you want to delete these tasks? (y/n):
+			*/
+		},
 	}
+	return deleteCmd
+}
 
-	// Handle cases where endFormat is not provided but endHour is in 12-hour format
-	if endFormat == "" && endHour < startHour {
-		endHour += 12
+func (h *Handler) ImportCmd() *cobra.Command {
+	importCmd := &cobra.Command{
+		Use:   "import",
+		Short: "Import tasks from a file",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Importing tasks from '%s'...\n", args[0])
+			fmt.Println("  - 10 tasks found in the file\n  - 9 tasks successfully imported\n  - 1 task skipped (duplicate ID: 5)\n\nImport complete. 9 tasks added.")
+		},
 	}
+	return importCmd
+}
 
-	if startHour > endHour || (startHour == endHour && startMinute >= endMinute) {
-		return nil, nil, fmt.Errorf("starting time must be earlier than ending time: %s", arg)
+func (h *Handler) ExportCmd() *cobra.Command {
+	exportCmd := &cobra.Command{
+		Use:   "export",
+		Short: "Export tasks to file",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Exporting tasks to '%s'...\n", args[0])
+			fmt.Printf("  - 15 tasks exported\n\n")
+			fmt.Printf("Export complete. All tasks saved to '%s'.\n", args[0])
+		},
 	}
-
-	if startMinute == -1 {
-		startMinute = 0
-	}
-	if endMinute == -1 {
-		endMinute = 0
-	}
-
-	fmt.Printf("Start Time: %02d:%02d\n", startHour, startMinute)
-	fmt.Printf("End Time: %02d:%02d\n", endHour, endMinute)
-	t := time.Now()
-	st := time.Date(t.Year(), t.Month(), t.Day(), startHour, startMinute, 0, 0, t.Location())
-	et := time.Date(t.Year(), t.Month(), t.Day(), endHour, endMinute, 0, 0, t.Location())
-	return &st, &et, nil
+	return exportCmd
 }
