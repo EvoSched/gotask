@@ -3,30 +3,33 @@ package ui
 import (
 	"fmt"
 	"github.com/EvoSched/gotask/internal/models"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/table"
 )
 
 func (m model) View() string {
 	switch m.state {
 	case Main:
+		// todo we need to include a banner 'Main'
 		return renderTable(m.main)
 	case Pending:
+		// todo we need to include a banner 'Pending'
 		return renderTable(m.pend)
 	case Archived:
+		// todo we need to include a banner 'Archive'
 		return renderTable(m.arch)
 	case Detail:
 		return renderDetail(m.task)
 	case List:
-		return renderList()
+		return renderList(m.list)
 	case Help:
 		return renderHelp()
-	default:
-		return ""
 	}
+	return ""
 }
 
-func renderList() string {
-	return ""
+func renderList(list list.Model) string {
+	return listStyle.Render(list.View())
 }
 
 func renderDetail(t models.Task) string {
