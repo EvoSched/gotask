@@ -1,22 +1,51 @@
 package service
 
 import (
-	"github.com/EvoSched/gotask/internal/models"
-	"github.com/EvoSched/gotask/internal/repository"
+	"database/sql"
+	"github.com/EvoSched/gotask/internal/types"
 )
 
-type TaskService struct {
-	repo repository.Task
+type TaskRepoQuery interface {
+	GetTask(id int) (*types.Task, error)
+	GetTasks() ([]*types.Task, error)
+	// todo need to add interface functions for getting tasks by priority, tags, and time
 }
 
-func NewTaskService(repo repository.Task) *TaskService {
-	return &TaskService{repo}
+type TaskRepoStmt interface {
+	AddTask(task *types.Task) error
+	EditTask(id int, task *types.Task) error
+	RemoveTask(id int) error
+	CompleteTask(id int) error
+	IncompleteTask(id int) error
+	AddNote(id int, note string) error
 }
 
-func (s *TaskService) GetTask(id int) (*models.Task, error) {
-	return s.repo.GetTask(id)
+type TaskRepo struct {
+	db *sql.DB
 }
 
-func (s *TaskService) GetTasks() ([]*models.Task, error) {
-	return s.repo.GetTasks()
+func NewTaskRepo(db *sql.DB) *TaskRepo {
+	return &TaskRepo{db}
+}
+
+func (r *TaskRepo) GetTask(id int) (*types.Task, error) {
+	//TODO: sql query
+
+	for _, task := range tasks {
+		if task.ID == id {
+			return task, nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (r *TaskRepo) GetTasks() ([]*types.Task, error) {
+	//TODO: sql query
+
+	// todo remove when integrating SQL (this is purely for displaying mock data
+	tasks[1].Finished = true
+	tasks[3].Finished = true
+
+	return tasks, nil
 }

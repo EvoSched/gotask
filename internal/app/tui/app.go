@@ -2,11 +2,11 @@ package tui
 
 import (
 	"fmt"
+	"github.com/EvoSched/gotask/internal/sqlite"
 	"log"
 	"os"
 
 	"github.com/EvoSched/gotask/internal/config"
-	"github.com/EvoSched/gotask/internal/repository"
 	"github.com/EvoSched/gotask/internal/service"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -20,7 +20,6 @@ type model struct {
 }
 
 func Run() {
-	//repository<-service<-handler<-tui
 
 	//init config
 	cfg, err := config.NewConfig(ConfigDir)
@@ -29,15 +28,11 @@ func Run() {
 	}
 
 	//init sqlite
-	db, err := repository.NewSQLite(&cfg.SQLite)
+	db, err := sqlite.NewSQLite(&cfg.SQLite)
 
 	//init repository
-	r := repository.NewRepository(db)
-
-	//init service
-	s := service.NewService(r)
-
-	fmt.Println(s)
+	r := service.NewTaskRepo(db)
+	fmt.Println(r)
 
 	//open tui
 	p := tea.NewProgram(model{
