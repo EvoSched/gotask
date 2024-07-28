@@ -12,7 +12,6 @@ type Task struct {
 	Notes     []string   // comment1,comment2,comment3
 	StartAt   *time.Time // timestamp datetime
 	EndAt     *time.Time
-	CreatedAt *time.Time
 	UpdatedAt *time.Time
 	Finished  bool
 }
@@ -27,7 +26,6 @@ func NewTask(id int, desc string, priority int, tags []string, comments []string
 		Notes:     comments,
 		StartAt:   startAt,
 		EndAt:     endAt,
-		CreatedAt: &now,
 		UpdatedAt: &now,
 	}
 }

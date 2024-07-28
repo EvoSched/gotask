@@ -28,8 +28,8 @@ func Run() {
 	r := service.NewTaskRepo(db)
 
 	//init cobra
-	h := cobra.NewCmd(r)
+	c := cobra.NewCmd(r)
 
 	//execute command
-	h.Execute()
+	c.Execute()
 }
