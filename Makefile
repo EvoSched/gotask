@@ -3,18 +3,12 @@ include .env 	# Include environment variables
 .SILENT: 		# Don't show the command executed
 
 build-cli:
-	go build -o task ./cmd/cli/main.go
+	go build -o gt ./cmd/main.go
 
-build-tui:
-	go build -o tui ./cmd/tui/main.go
-
-build : build-cli build-tui
-
-tui: build-tui
-	./tui
+build : build-cli
 
 cli: build-cli
-	./task
+	./gt
 
 docker-build:
 	@docker-compose -f deployments/docker-compose.yml -p gotask --env-file .env up --build

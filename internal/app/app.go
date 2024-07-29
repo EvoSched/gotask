@@ -1,4 +1,4 @@
-package cli
+package app
 
 import (
 	"github.com/EvoSched/gotask/internal/sqlite"
