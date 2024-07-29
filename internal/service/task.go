@@ -2,22 +2,23 @@ package service
 
 import (
 	"database/sql"
+	"github.com/EvoSched/gotask/internal/sqlite"
 	"github.com/EvoSched/gotask/internal/types"
 )
 
 type TaskRepoQuery interface {
 	GetTask(id int) (*types.Task, error)
 	GetTasks() ([]*types.Task, error)
-	// todo need to add interface functions for getting tasks by priority, tags, and time
+	GetDesc(id int) (string, error)
+	GetNotes(id int) ([]string, error)
 }
 
 type TaskRepoStmt interface {
-	AddTask(task *types.Task) error
-	EditTask(id int, task *types.Task) error
-	RemoveTask(id int) error
-	CompleteTask(id int) error
-	IncompleteTask(id int) error
+	AddTask(task *types.Task) (int, error)
 	AddNote(id int, note string) error
+	UpdateStatus(id int, status bool) error
+	UpdateTask(task *types.Task) error
+	DeleteTask(db *sql.DB, id int) error
 }
 
 type TaskRepo struct {
@@ -28,24 +29,51 @@ func NewTaskRepo(db *sql.DB) *TaskRepo {
 	return &TaskRepo{db}
 }
 
+func (r *TaskRepo) GetDesc(id int) (string, error) {
+	return sqlite.QueryDesc(r.db, id)
+}
+
+func (r *TaskRepo) GetNotes(id int) ([]string, error) {
+	return sqlite.QueryNotes(r.db, id)
+}
+
 func (r *TaskRepo) GetTask(id int) (*types.Task, error) {
-	//TODO: sql query
-
-	for _, task := range tasks {
-		if task.ID == id {
-			return task, nil
-		}
+	t, err := sqlite.QueryTask(r.db, id)
+	if err != nil {
+		return nil, err
 	}
-
-	return nil, nil
+	n, err := sqlite.QueryNotes(r.db, id)
+	if err != nil {
+		return nil, err
+	}
+	t.Notes = append(t.Notes, n...)
+	return &t, nil
 }
 
 func (r *TaskRepo) GetTasks() ([]*types.Task, error) {
-	//TODO: sql query
+	return sqlite.QueryTasks(r.db)
+}
 
-	// todo remove when integrating SQL (this is purely for displaying mock data
-	tasks[1].Finished = true
-	tasks[3].Finished = true
+func (r *TaskRepo) AddTask(task *types.Task) (int, error) {
+	err := sqlite.InsertTask(r.db, task)
+	if err != nil {
+		return 0, err
+	}
+	return sqlite.QueryLastID(r.db)
+}
 
-	return tasks, nil
+func (r *TaskRepo) AddNote(id int, note string) error {
+	return sqlite.InsertNote(r.db, id, note)
+}
+
+func (r *TaskRepo) UpdateStatus(id int, status bool) error {
+	return sqlite.UpdateStatus(r.db, id, status)
+}
+
+func (r *TaskRepo) UpdateTask(task *types.Task) error {
+	return sqlite.UpdateTask(r.db, task)
+}
+
+func (r *TaskRepo) DeleteTask(id int) error {
+	return sqlite.DeleteTask(r.db, id)
 }

@@ -16,10 +16,9 @@ type Task struct {
 	Finished  bool
 }
 
-func NewTask(id int, desc string, priority int, tags []string, comments []string, startAt *time.Time, endAt *time.Time) *Task {
+func NewTask(desc string, priority int, tags []string, comments []string, startAt *time.Time, endAt *time.Time) *Task {
 	now := time.Now()
 	return &Task{
-		ID:        id,
 		Desc:      desc,
 		Priority:  priority,
 		Tags:      tags,

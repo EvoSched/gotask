@@ -55,8 +55,12 @@ gt add "Setup database" @ 11-3 +project
 				p := 5
 				ti.priority = &p
 			}
-			t := types.NewTask(1, *ti.desc, *ti.priority, ti.addTags, nil, ti.startAt, ti.endAt)
-			fmt.Printf("Added task %d.\n", t.ID)
+			t := types.NewTask(*ti.desc, *ti.priority, ti.addTags, nil, ti.startAt, ti.endAt)
+			i, err := c.repo.AddTask(t)
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("Added task %d.\n", i)
 		},
 	}
 
@@ -109,6 +113,7 @@ func (c *Cmd) ModCmd() *cobra.Command {
 				fmt.Printf("Task %d not found.\n", *ti.id)
 				return
 			}
+
 			fmt.Printf("Task %d '%s' has been updated:\n", t.ID, t.Desc)
 			if ti.desc != nil {
 				fmt.Printf("  - Description updated to '%s'\n", *ti.desc)
@@ -126,6 +131,7 @@ func (c *Cmd) ModCmd() *cobra.Command {
 			}
 			if ti.startAt != nil {
 				t.StartAt = ti.startAt
+				t.EndAt = nil
 			}
 			if ti.endAt != nil {
 				t.EndAt = ti.endAt
@@ -137,6 +143,12 @@ func (c *Cmd) ModCmd() *cobra.Command {
 				} else {
 					fmt.Printf("%s %s\n", t.StartAt.Format("Mon, 02 Jan 2006"), t.StartAt.Format(time.Kitchen))
 				}
+			}
+			curr := time.Now()
+			t.UpdatedAt = &curr
+			err = c.repo.UpdateTask(t)
+			if err != nil {
+				log.Fatal(err)
 			}
 			fmt.Println("Update complete. 1 task modified.")
 		},
@@ -154,16 +166,15 @@ func (c *Cmd) NoteCmd() *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
-			t, err := c.repo.GetTask(id)
+			d, err := c.repo.GetDesc(id)
 			if err != nil {
 				log.Fatal(err)
 			}
-			//check if task exists, because of nil pointer dereference
-			if t == nil {
-				fmt.Printf("Task %d not found.\n", id)
-				return
+			err = c.repo.AddNote(id, n)
+			if err != nil {
+				log.Fatal(err)
 			}
-			fmt.Printf("Task %d '%s' has been updated with a new note:\n", t.ID, t.Desc)
+			fmt.Printf("Task %d '%s' has been updated with a new note:\n", id, d)
 			fmt.Printf("  - Note: \"%s\"\n", n)
 			fmt.Println("1 task updated with a note.")
 		},
@@ -206,7 +217,15 @@ func (c *Cmd) DoneCmd() *cobra.Command {
 					fmt.Printf("Task %d not found.\n", i)
 					continue
 				}
-				fmt.Printf("Finished task %d '%s'.\n", i, t.Desc)
+				if t.Finished {
+					fmt.Printf("Task %d already finished.\n", i)
+				} else {
+					err = c.repo.UpdateStatus(i, true)
+					if err != nil {
+						return
+					}
+					fmt.Printf("Finished task %d '%s'.\n", i, t.Desc)
+				}
 			}
 			if len(ids) > 1 {
 				fmt.Printf("Finished %d tasks.\n", len(ids))
@@ -237,7 +256,15 @@ func (c *Cmd) UndoCmd() *cobra.Command {
 					fmt.Printf("Task %d not found.\n", i)
 					continue
 				}
-				fmt.Printf("Reverted task %d '%s' to incomplete.\n", i, t.Desc)
+				if !t.Finished {
+					fmt.Printf("Task %d already incomplete.\n", i)
+				} else {
+					err = c.repo.UpdateStatus(i, false)
+					if err != nil {
+						return
+					}
+					fmt.Printf("Reverted task %d '%s' to incomplete.\n", i, t.Desc)
+				}
 			}
 			if len(ids) > 1 {
 				fmt.Printf("Reverted %d tasks.\n", len(ids))
@@ -255,14 +282,42 @@ func (c *Cmd) DeleteCmd() *cobra.Command {
 		Short: "Deletes tasks by ID",
 		Args:  cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			/*
-				Preparing to delete tasks with IDs: 1, 3, 5
-				  - Task 1: 'finish some work'
-				  - Task 3: 'study BSTs'
-				  - Task 5: 'clean the house'
-
-				Are you sure you want to delete these tasks? (y/n):
-			*/
+			ids, err := parseGet(args)
+			if err != nil {
+				log.Fatal(err)
+			}
+			var tasks []*types.Task
+			for _, i := range ids {
+				t, err := c.repo.GetTask(i)
+				if err != nil {
+					log.Fatal(err)
+				}
+				tasks = append(tasks, t)
+			}
+			fmt.Printf("Preparing to delete tasks with ")
+			if len(ids) == 1 {
+				fmt.Printf("ID: %d\n", ids[0])
+			} else {
+				fmt.Printf("IDs: %d", ids[0])
+				for j := 1; j < len(ids); j++ {
+					fmt.Printf(", %d", ids[j])
+				}
+			}
+			for _, t := range tasks {
+				fmt.Printf("  - Task %d: '%s'\n", t.ID, t.Desc)
+			}
+			if len(ids) == 1 {
+				fmt.Printf("\nAre you sure you want to delete this task? (y/n): ")
+			} else {
+				fmt.Printf("\nAre you sure you want to delete these tasks? (y/n): ")
+			}
+			// todo need to prompt user for input (check whether first char matches 'y')
+			for _, i := range ids {
+				err = c.repo.DeleteTask(i)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
 		},
 	}
 	return deleteCmd
@@ -320,7 +375,12 @@ func displayTask(task *types.Task) {
 	// Display last modified time
 	fmt.Printf("Last modified  %s\n", task.UpdatedAt.Format(time.RFC1123))
 
-	fmt.Printf("\nNotes:\nThu, 18 Jul 2024 00:50:46 EDT - unexpected issue came up, am resolving now")
+	fmt.Printf("\nNotes:\n")
+	if task.Notes != nil {
+		for _, n := range task.Notes {
+			fmt.Printf("  - %s\n", n)
+		}
+	}
 }
 
 // / formatTask prints a task in the desired format
@@ -350,15 +410,15 @@ func formatTask(task *types.Task) string {
 	}
 
 	// Format the output string with additional spaces for the 'Due' column
-	return fmt.Sprintf("%d   %s     %-30s %d          %-13s %s   ", // Adjusted format string with extra spaces
+	return fmt.Sprintf("%-6d %s     %-30s %d          %-13s %s   ", // Adjusted format string with extra spaces
 		task.ID, status, task.Desc, task.Priority, tags, due)
 }
 
 // displayTasks prints a list of tasks in the desired format
 func displayTasks(tasks []*types.Task) {
 	// Print header
-	fmt.Println("ID  Status  Desc                           Priority   Tags          Due   ")
-	fmt.Println("------------------------------------------------------------------------------------------------------")
+	fmt.Println("ID     Status  Desc                           Priority   Tags          Due   ")
+	fmt.Println("---------------------------------------------------------------------------------------------------------")
 
 	// Print each task
 	for _, task := range tasks {

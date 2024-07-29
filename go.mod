@@ -4,6 +4,7 @@ go 1.22.5
 
 require (
 	github.com/charmbracelet/bubbletea v0.26.6
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 )

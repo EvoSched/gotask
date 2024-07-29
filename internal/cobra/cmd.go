@@ -19,7 +19,7 @@ func NewCmd(repo *service.TaskRepo) *Cmd {
 func (c *Cmd) Execute() {
 	rootCmd := c.RootCmd()
 
-	rootCmd.AddCommand(c.AddCmd(), c.ModCmd(), c.GetCmd(), c.ListCmd(), c.DoneCmd(), c.UndoCmd(), c.NoteCmd(), c.ImportCmd(), c.ExportCmd())
+	rootCmd.AddCommand(c.AddCmd(), c.ModCmd(), c.DeleteCmd(), c.GetCmd(), c.ListCmd(), c.DoneCmd(), c.UndoCmd(), c.NoteCmd(), c.ImportCmd(), c.ExportCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
