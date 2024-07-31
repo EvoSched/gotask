@@ -3,15 +3,12 @@ include .env 	# Include environment variables
 .SILENT: 		# Don't show the command executed
 
 build-cli:
-	go build -o gt ./cmd/main.go
+	go build -o gt ./cmd/gt/main.go
 
-build-cli-windows:
-	GOOS=windows GOARCH=amd64 go build -o gt.exe ./cmd/main.go
-
-build: build-cli build-cli-windows
+build: build-cli
 
 clean:
-	rm -f gt gt.exe
+	rm -f gt
 
 docker-build:
 	@docker-compose -f deployments/docker-compose.yml -p gotask --env-file .env up --build
