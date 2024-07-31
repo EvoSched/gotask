@@ -5,15 +5,16 @@ import (
 )
 
 type Task struct {
-	ID        int
-	Desc      string
-	Priority  int
-	Tags      []string   // tags, tags: string tag1,tag2,tag3
-	Notes     []string   // comment1,comment2,comment3
-	StartAt   *time.Time // timestamp datetime
-	EndAt     *time.Time
-	UpdatedAt *time.Time
-	Finished  bool
+	ID          int
+	Desc        string
+	Priority    int
+	Tags        []string   // tags, tags: string tag1,tag2,tag3
+	Notes       []string   // comment1,comment2,comment3
+	StartAt     *time.Time // timestamp datetime
+	EndAt       *time.Time
+	UpdatedAt   *time.Time
+	CompletedAt *time.Time
+	Finished    bool
 }
 
 func NewTask(desc string, priority int, tags []string, comments []string, startAt *time.Time, endAt *time.Time) *Task {

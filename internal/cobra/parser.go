@@ -41,13 +41,15 @@ func parseTask(args []string, isAdd bool) (*taskInfo, error) {
 	for i := 1; i < len(args); i++ {
 		if args[i][0] == '+' {
 			task.addTags = append(task.addTags, args[i][1:])
-		} else if args[i][0] == '-' && !isAdd {
+		} else if args[i][0] == '!' && !isAdd {
 			task.remTags = append(task.remTags, args[i][1:])
 		} else if !timeFlg && args[i][0] == '@' { // this requires that the time expression be separated from '@' ex. gt add "work" @ 12-3 +MA
 			timeFlg = true
 			c := i + 3
 			j := i + 1
+			curIdx := 0
 			for ; j < len(args) && j < c; j++ {
+				curIdx++
 				t, ts, err := parseTime(args[j])
 				if err != nil && date == nil && tStmp == nil {
 					return nil, err
@@ -103,10 +105,6 @@ func parseTask(args []string, isAdd bool) (*taskInfo, error) {
 	return task, nil
 }
 
-func parseList(args []string) ([]string, *timeStamp, error) {
-	return nil, nil, nil
-}
-
 func parseGet(args []string) ([]int, error) {
 	var ids []int
 	for _, arg := range args {
@@ -154,10 +152,19 @@ func parseTime(s string) (*time.Time, *timeStamp, error) {
 }
 
 func parseDate(arg string) (*time.Time, error) {
-	today := time.Now()
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 0, 0, time.UTC)
 	switch arg {
 	case "eod":
 		return &today, nil
+	case "now":
+		return &now, nil
+	case "tmrw":
+		d := today.AddDate(0, 0, 1)
+		return &d, nil
+	case "yest":
+		d := today.AddDate(0, 0, -1)
+		return &d, nil
 	case "eow", "sat":
 		d := today.AddDate(0, 0, int(time.Saturday-today.Weekday()+7)%7)
 		return &d, nil

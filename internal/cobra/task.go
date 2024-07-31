@@ -18,10 +18,10 @@ var dateFormats = []string{DateFmtDMY, time.DateOnly}
 
 func (c *Cmd) RootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "task",
+		Use:   "gt",
 		Short: "GoTask",
-		Long: `GoTask is a cli application for managing tasks efficiently. 
-It allows you to add, list, mod, get, complete, and prioritize your tasks with ease.`,
+		Long: `GoTask is a comprehensive cli application for managing your tasks both intuitively and efficiently. 
+It allows you to add, list, mod, get, complete, import, export, and prioritize your tasks with ease.`,
 	}
 	return rootCmd
 }
@@ -33,18 +33,15 @@ func (c *Cmd) AddCmd() *cobra.Command {
 		Long: `Adds a new task with the provided description. Additional options include specifying time expression, tags, and priority.
 
 Required:
-- description: Description of the task to be added.
+- description  Description of the task to be added.
 
 Optional:
-- time: '@' marks the beginning of the time expression (halts when encountering non-time token).
-- tag: Tag for categorizing the task, prefixed with '+'.
-- priority: Priority level for the task from 1 to 10 (min-max), prefixed with '%'.
-
-Example usages:
-gt add 'Write up ReadMe'
+- time      '@' marks the beginning of the time expression (halts when encountering non-time token).
+- tag       Tag for categorizing the task, prefixed with '+'.
+- priority  Priority level for the task from 1 to 10 (min-max), prefixed with '%'.`,
+		Example: `gt add 'Write up ReadMe'
 gt add 'Finish documentation' +work %8 @ 11-01-2024 10am-4:15
-gt add "Setup database" @ 11-3 +project
-`,
+gt add "Setup database" @ 11-3 +project`,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			ti, err := parseTask(args, true)
@@ -71,7 +68,13 @@ func (c *Cmd) GetCmd() *cobra.Command {
 	getCmd := &cobra.Command{
 		Use:   "get",
 		Short: "Get tasks by ID",
-		Args:  cobra.MinimumNArgs(1),
+		Long: `Retrieves a task/s from the provided ids. Supports multiple retrievals in a single command.
+
+Required:
+- id  Id referencing task.`,
+		Example: `gt get 1
+gt get 1 3`,
+		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			ids, err := parseGet(args)
 			if err != nil {
@@ -81,11 +84,6 @@ func (c *Cmd) GetCmd() *cobra.Command {
 				t, err := c.repo.GetTask(i)
 				if err != nil {
 					log.Fatal(err)
-				}
-				//check if task exists, because of nil pointer dereference
-				if t == nil {
-					fmt.Printf("Task %d not found.\n", i)
-					continue
 				}
 				displayTask(t)
 				fmt.Println()
@@ -98,7 +96,18 @@ func (c *Cmd) GetCmd() *cobra.Command {
 func (c *Cmd) ModCmd() *cobra.Command {
 	editCmd := &cobra.Command{
 		Use:   "mod",
-		Short: "Modify a task by ID",
+		Short: "Modify task by ID",
+		Long: `Modifies an existing task given the arguments provided. Mod allows reorganization of arguments, but duplicates are invalid.
+
+Optional:
+- description  Description of the task to be modified. Must be surrounded by ' or " if description spans more than 1 word.
+- time         '@' marks the beginning of the time expression (halts when encountering non-time token).
+- tag          Tag for categorizing the task, prefixed with '+'.
+- priority     Priority level for the task from 1 to 10 (min-max), prefixed with '%'.`,
+		Example: `gt mod 1 'Reorganize structure of ReadMe'
+gt mod 2 'Finish documentation for cobra commands' @ 11-01-2024 10am-4:15 +work %8
+gt mod 3 +project "Setup database" @ 11-3`,
+		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			ti, err := parseTask(args, false)
 			if err != nil {
@@ -106,11 +115,6 @@ func (c *Cmd) ModCmd() *cobra.Command {
 			}
 			t, err := c.repo.GetTask(*ti.id)
 			if err != nil {
-				return
-			}
-			//check if task exists, because of nil pointer dereference
-			if t == nil {
-				fmt.Printf("Task %d not found.\n", *ti.id)
 				return
 			}
 
@@ -159,8 +163,15 @@ func (c *Cmd) ModCmd() *cobra.Command {
 func (c *Cmd) NoteCmd() *cobra.Command {
 	comCmd := &cobra.Command{
 		Use:   "note",
-		Short: "Notes a task by ID",
-		Args:  cobra.ExactArgs(2),
+		Short: "Note task by ID",
+		Long: `Attaches a note to a given task provided the task id. Notes are immutable and cannot be edited once created.
+
+Required:
+- id    Id referencing task.
+- note  Note providing additional clarification for given task`,
+		Example: `gt note 1 "Provide short gif demonstrating GoTask CLI and TUI"
+gt note 2 "Finish writing up man docs from cobra commands"`,
+		Args: cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			id, n, err := parseNote(args)
 			if err != nil {
@@ -184,8 +195,11 @@ func (c *Cmd) NoteCmd() *cobra.Command {
 
 func (c *Cmd) ListCmd() *cobra.Command {
 	listCmd := &cobra.Command{
-		Use:   "list",
-		Short: "List all tasks",
+		Use:     "list",
+		Short:   "List all tasks",
+		Long:    "Displays a list of all tasks created both new, overdue, and archived.",
+		Example: "gt list",
+		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			t, err := c.repo.GetTasks()
 			if err != nil {
@@ -197,11 +211,49 @@ func (c *Cmd) ListCmd() *cobra.Command {
 	return listCmd
 }
 
+func (c *Cmd) DueCmd() *cobra.Command {
+	dueCmd := &cobra.Command{
+		Use:     "due",
+		Short:   "List all due and overdue tasks",
+		Long:    "Displays a list of all tasks due and overdue.",
+		Example: "gt due",
+		Args:    cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			t, err := c.repo.GetTasksDue()
+			if err != nil {
+				log.Fatal(err)
+			}
+			displayDueTasks(t)
+		},
+	}
+	return dueCmd
+}
+
+func (c *Cmd) ArchivedCmd() *cobra.Command {
+	dueCmd := &cobra.Command{
+		Use:     "archived",
+		Short:   "List all archived tasks",
+		Long:    "Displays a list of all tasks archived.",
+		Example: "gt archived",
+		Args:    cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			t, err := c.repo.GetTasksArchived()
+			if err != nil {
+				log.Fatal(err)
+			}
+			displayArchivedTasks(t)
+		},
+	}
+	return dueCmd
+}
+
 func (c *Cmd) DoneCmd() *cobra.Command {
 	doneCmd := &cobra.Command{
-		Use:   "done",
-		Short: "Marks task as complete by ID",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "done",
+		Short:   "Mark task as complete by ID",
+		Long:    "Marks all tasks provided by ID as complete. This updates the lists that the tasks will now appear in (e.g. due, archived)",
+		Example: "gt done 2\ngt done 1 3",
+		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			ids, err := parseDone(args)
 			if err != nil {
@@ -212,17 +264,13 @@ func (c *Cmd) DoneCmd() *cobra.Command {
 				if err != nil {
 					log.Fatal(err)
 				}
-				//check if task exists, because of nil pointer dereference
-				if t == nil {
-					fmt.Printf("Task %d not found.\n", i)
-					continue
-				}
 				if t.Finished {
 					fmt.Printf("Task %d already finished.\n", i)
+					return
 				} else {
 					err = c.repo.UpdateStatus(i, true)
 					if err != nil {
-						return
+						log.Fatal(err)
 					}
 					fmt.Printf("Finished task %d '%s'.\n", i, t.Desc)
 				}
@@ -239,8 +287,11 @@ func (c *Cmd) DoneCmd() *cobra.Command {
 
 func (c *Cmd) UndoCmd() *cobra.Command {
 	undoCmd := &cobra.Command{
-		Use:   "undo",
-		Short: "Marks task as incomplete by ID",
+		Use:     "undo",
+		Short:   "Mark task as incomplete by ID",
+		Long:    "Marks all tasks provided by ID as incomplete. This updates the lists that the tasks will now appear in (e.g. due, archived)",
+		Example: "gt undo 3\ngt undo 2 1",
+		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			ids, err := parseDone(args)
 			if err != nil {
@@ -251,17 +302,13 @@ func (c *Cmd) UndoCmd() *cobra.Command {
 				if err != nil {
 					log.Fatal(err)
 				}
-				//check if task exists, because of nil pointer dereference
-				if t == nil {
-					fmt.Printf("Task %d not found.\n", i)
-					continue
-				}
 				if !t.Finished {
 					fmt.Printf("Task %d already incomplete.\n", i)
+					return
 				} else {
 					err = c.repo.UpdateStatus(i, false)
 					if err != nil {
-						return
+						log.Fatal(err)
 					}
 					fmt.Printf("Reverted task %d '%s' to incomplete.\n", i, t.Desc)
 				}
@@ -278,9 +325,11 @@ func (c *Cmd) UndoCmd() *cobra.Command {
 
 func (c *Cmd) DeleteCmd() *cobra.Command {
 	deleteCmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Deletes tasks by ID",
-		Args:  cobra.MinimumNArgs(1),
+		Use:     "delete",
+		Short:   "Delete tasks by ID",
+		Long:    "Deletes all tasks provided by ID. This updates the lists that the tasks will no longer appear in (e.g. due, archived, list)",
+		Example: "gt delete 1\ngt delete 2 3",
+		Args:    cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			ids, err := parseGet(args)
 			if err != nil {
@@ -303,6 +352,7 @@ func (c *Cmd) DeleteCmd() *cobra.Command {
 					fmt.Printf(", %d", ids[j])
 				}
 			}
+			fmt.Println()
 			for _, t := range tasks {
 				fmt.Printf("  - Task %d: '%s'\n", t.ID, t.Desc)
 			}
@@ -311,11 +361,18 @@ func (c *Cmd) DeleteCmd() *cobra.Command {
 			} else {
 				fmt.Printf("\nAre you sure you want to delete these tasks? (y/n): ")
 			}
-			// todo need to prompt user for input (check whether first char matches 'y')
-			for _, i := range ids {
-				err = c.repo.DeleteTask(i)
-				if err != nil {
-					log.Fatal(err)
+			var s string
+			_, err = fmt.Scanln(&s)
+			if err != nil {
+				return
+			}
+			s = strings.TrimSpace(s)
+			if len(s) > 0 && s[0] == 'y' || s[0] == 'Y' {
+				for _, i := range ids {
+					err = c.repo.DeleteTask(i)
+					if err != nil {
+						log.Fatal(err)
+					}
 				}
 			}
 		},
@@ -323,32 +380,32 @@ func (c *Cmd) DeleteCmd() *cobra.Command {
 	return deleteCmd
 }
 
-func (c *Cmd) ImportCmd() *cobra.Command {
-	importCmd := &cobra.Command{
-		Use:   "import",
-		Short: "Import tasks from a file",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Importing tasks from '%s'...\n", args[0])
-			fmt.Println("  - 10 tasks found in the file\n  - 9 tasks successfully imported\n  - 1 task skipped (duplicate ID: 5)\n\nImport complete. 9 tasks added.")
-		},
-	}
-	return importCmd
-}
-
-func (c *Cmd) ExportCmd() *cobra.Command {
-	exportCmd := &cobra.Command{
-		Use:   "export",
-		Short: "Export tasks to file",
-		Args:  cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Exporting tasks to '%s'...\n", args[0])
-			fmt.Printf("  - 15 tasks exported\n\n")
-			fmt.Printf("Export complete. All tasks saved to '%s'.\n", args[0])
-		},
-	}
-	return exportCmd
-}
+//func (c *Cmd) ImportCmd() *cobra.Command {
+//	importCmd := &cobra.Command{
+//		Use:   "import",
+//		Short: "Import tasks from a file",
+//		Args:  cobra.ExactArgs(1),
+//		Run: func(cmd *cobra.Command, args []string) {
+//			fmt.Printf("Importing tasks from '%s'...\n", args[0])
+//			fmt.Println("  - 10 tasks found in the file\n  - 9 tasks successfully imported\n  - 1 task skipped (duplicate ID: 5)\n\nImport complete. 9 tasks added.")
+//		},
+//	}
+//	return importCmd
+//}
+//
+//func (c *Cmd) ExportCmd() *cobra.Command {
+//	exportCmd := &cobra.Command{
+//		Use:   "export",
+//		Short: "Export tasks to file",
+//		Args:  cobra.ExactArgs(1),
+//		Run: func(cmd *cobra.Command, args []string) {
+//			fmt.Printf("Exporting tasks to '%s'...\n", args[0])
+//			fmt.Printf("  - 15 tasks exported\n\n")
+//			fmt.Printf("Export complete. All tasks saved to '%s'.\n", args[0])
+//		},
+//	}
+//	return exportCmd
+//}
 
 func displayTask(task *types.Task) {
 	// Print header
@@ -358,7 +415,8 @@ func displayTask(task *types.Task) {
 	fmt.Printf("Description    %s\n", task.Desc)
 	fmt.Printf("Priority       %d\n", task.Priority)
 	if len(task.Tags) > 0 {
-		fmt.Printf("Tags           %v\n", task.Tags)
+		t := strings.Join(task.Tags, ", ")
+		fmt.Printf("Tags           %v\n", t)
 	}
 
 	// Display 'Due' with date and time
@@ -383,7 +441,7 @@ func displayTask(task *types.Task) {
 	}
 }
 
-// / formatTask prints a task in the desired format
+// formatTask prints a task in the desired format
 func formatTask(task *types.Task) string {
 	// Format the status
 	status := "[ ]"
@@ -391,8 +449,20 @@ func formatTask(task *types.Task) string {
 		status = "[x]"
 	}
 
+	var d string
+	if len(task.Desc) > 27 {
+		d = task.Desc[:27]
+		d += ".."
+	} else {
+		d = task.Desc
+	}
+
 	// Format the tags
 	tags := strings.Join(task.Tags, ", ")
+	if len(tags) > 10 {
+		tags = tags[:10]
+		tags += ".."
+	}
 
 	// Format the due date and time
 	var due string
@@ -408,10 +478,9 @@ func formatTask(task *types.Task) string {
 	} else {
 		due = "-"
 	}
-
 	// Format the output string with additional spaces for the 'Due' column
-	return fmt.Sprintf("%-6d %s     %-30s %d          %-13s %s   ", // Adjusted format string with extra spaces
-		task.ID, status, task.Desc, task.Priority, tags, due)
+	return fmt.Sprintf("%-6d %-7s %-30s %-10d %-13s %s   ", // Adjusted format string with extra spaces
+		task.ID, status, d, task.Priority, tags, due)
 }
 
 // displayTasks prints a list of tasks in the desired format
@@ -423,5 +492,62 @@ func displayTasks(tasks []*types.Task) {
 	// Print each task
 	for _, task := range tasks {
 		fmt.Println(formatTask(task))
+	}
+}
+
+func formatTaskArchived(task *types.Task, archived bool) string {
+	var d string
+	if len(task.Desc) > 27 {
+		d = task.Desc[:27]
+		d += ".."
+	} else {
+		d = task.Desc
+	}
+
+	// Format the tags
+	tags := strings.Join(task.Tags, ", ")
+	if len(tags) > 10 {
+		tags = tags[:10]
+		tags += ".."
+	}
+
+	var due string
+	if !archived {
+		if task.StartAt != nil && task.EndAt != nil {
+			due = fmt.Sprintf("%s %s - %s",
+				task.StartAt.Format("Mon, 02 Jan 2006"),
+				task.StartAt.Format("03:04pm"),
+				task.EndAt.Format("03:04pm"))
+		} else if task.StartAt != nil {
+			due = fmt.Sprintf("%s %s",
+				task.StartAt.Format("Mon, 02 Jan 2006"),
+				task.StartAt.Format("03:04pm"))
+		} else {
+			due = "-"
+		}
+	} else {
+		due = task.CompletedAt.Format(time.DateTime)
+	}
+
+	// Format the output string with additional spaces for the 'Due' column
+	return fmt.Sprintf("%-6d %-30s %-10d %-13s %s   ", // Adjusted format string with extra spaces
+		task.ID, d, task.Priority, tags, due)
+}
+
+func displayDueTasks(tasks []*types.Task) {
+	fmt.Println("ID     Desc                           Priority   Tags          Due   ")
+	fmt.Println("-------------------------------------------------------------------------------------------------")
+
+	for _, t := range tasks {
+		fmt.Println(formatTaskArchived(t, false))
+	}
+}
+
+func displayArchivedTasks(tasks []*types.Task) {
+	fmt.Println("ID     Desc                           Priority   Tags          Completed   ")
+	fmt.Println("-------------------------------------------------------------------------------------------------")
+
+	for _, t := range tasks {
+		fmt.Println(formatTaskArchived(t, true))
 	}
 }
